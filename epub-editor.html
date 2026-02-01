@@ -118,7 +118,8 @@
   /* ─── LAYOUT ─── */
   .layout {
     display: flex;
-    height: calc(100vh - 44px);
+    height: calc(100dvh - 44px);
+    max-height: calc(100vh - 44px - 80px);
     overflow: auto;
   }
 
@@ -432,6 +433,11 @@
 
   /* 모바일 반응형 */
   @media (max-width: 768px) {
+    .layout {
+      height: calc(100dvh - 44px - 60px) !important;
+      max-height: calc(100vh - 44px - 60px) !important;
+    }
+
     .sidebar {
       width: 160px;
       min-width: 160px;
