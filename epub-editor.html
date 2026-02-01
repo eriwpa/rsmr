@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EPUB Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0e0f11;
+    --bg2: #161820;
+    --bg3: #1e2130;
+    --bg-hover: #252838;
+    --border: #2a2e3d;
+    --text: #c8ccd8;
+    --text-dim: #5a5f72;
+    --text-bright: #eef0f5;
+    --accent: #7c6aff;
+    --accent2: #5eead4;
+    --accent-dim: rgba(124,106,255,0.15);
+    --red: #f87171;
+    --green: #4ade80;
+    --yellow: #fbbf24;
+    --font-ui: 'Inter Tight', sans-serif;
+    --font-code: 'JetBrains Mono', monospace;
+  }
+
+  :root.light {
+    --bg: #f4f5f7;
+    --bg2: #ffffff;
+    --bg3: #eceef2;
+    --bg-hover: #e2e5eb;
+    --border: #d1d5df;
+    --text: #3a3f52;
+    --text-dim: #7b8299;
+    --text-bright: #1e2130;
+    --accent: #5a4fd4;
+    --accent-dim: rgba(90,79,212,0.1);
+    --red: #dc2626;
+    --green: #16a34a;
+    --yellow: #d97706;
+  }
+
+  .theme-toggle {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+    line-height: 1;
+  }
+  .theme-toggle:hover { background: var(--bg-hover); border-color: var(--accent); }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow: auto;
+    user-select: none;
+  }
+
+  /* ─── TOP BAR ─── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 44px;
+    padding: 0 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .topbar .logo {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .topbar .spacer { flex:1; }
+  .topbar button {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .topbar button:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text-bright); }
+  .topbar button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .topbar button.primary:hover { background: #6a58e8; }
+  .topbar button:disabled { opacity: .35; cursor: default; }
+  .topbar .fname {
+    font-size: 12px;
+    color: var(--text-dim);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ─── LAYOUT ─── */
+  .layout {
+    display: flex;
+    height: calc(100vh - 44px);
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: 240px;
+    min-width: 240px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 10px 14px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sidebar-header span { cursor: pointer; color: var(--text-dim); font-size: 14px; transition: color .15s; }
+  .sidebar-header span:hover { color: var(--accent); }
+
+  .file-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+  .file-group-label {
+    padding: 8px 14px 4px;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .12s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-item:hover { background: var(--bg-hover); }
+  .file-item.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+  .file-item .icon {
+    font-size: 13px;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .file-item .tag {
+    margin-left: auto;
+    font-size: 9px;
+    background: var(--bg3);
+    color: var(--text-dim);
+    padding: 2px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .file-item.active .tag { background: var(--accent-dim); color: var(--accent); }
+
+  /* ─── MAIN ─── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Editor tabs */
+  .editor-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 10px 0;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 6px 14px;
+    font-size: 11px;
+    color: var(--text-dim);
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-family: var(--font-ui);
+    transition: all .12s;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+  }
+  .tab:hover { color: var(--text); background: var(--bg3); }
+  .tab.active {
+    background: var(--bg2);
+    color: var(--text-bright);
+    border: 1px solid var(--border);
+    border-bottom: 1px solid var(--bg2);
+    margin-bottom: -1px;
+  }
+  .tab .close {
+    margin-left: 8px;
+    opacity: .4;
+    cursor: pointer;
+  }
+  .tab .close:hover { opacity: 1; color: var(--red); }
+
+  /* Editor area */
+  .editor-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+    background: var(--bg2);
+  }
+
+  /* Code editor */
+  .code-editor {
+    flex: 1;
+    width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-code);
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 16px 20px;
+    resize: none;
+    border: none;
+    outline: none;
+    overflow: auto;
+    tab-size: 2;
+  }
+  .code-editor::selection { background: rgba(124,106,255,0.25); }
+
+  /* TOC editor special */
+  .toc-editor {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .toc-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all .12s;
+    cursor: grab;
+  }
+  .toc-item:hover { border-color: var(--border); background: var(--bg3); }
+  .toc-item.dragging { opacity: .4; }
+  .toc-item .drag-handle { color: var(--text-dim); font-size: 14px; cursor: grab; }
+  .toc-item .toc-indent { width: 20px; flex-shrink:0; }
+  .toc-item input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-bright);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    outline: none;
+  }
+  .toc-item input:focus { border-bottom: 1px solid var(--accent); }
+  .toc-item .toc-target {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--font-code);
+    background: var(--bg2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .toc-item button {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all .12s;
+  }
+  .toc-item button:hover { background: var(--bg3); color: var(--red); }
+
+  .toc-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .toc-actions button {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .toc-actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Image preview */
+  .img-preview-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    gap: 16px;
+    padding: 20px;
+    overflow: auto;
+  }
+  .img-preview-wrap img { max-width: 100%; max-height: 60vh; border-radius: 8px; border: 1px solid var(--border); }
+  .img-meta { font-size: 11px; color: var(--text-dim); font-family: var(--font-code); }
+  .img-actions { display: flex; gap: 8px; }
+  .img-actions button {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .img-actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Empty state */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-dim);
+  }
+  .empty-state .big-icon { font-size: 48px; opacity: .3; }
+  .empty-state p { font-size: 13px; }
+
+  /* Status bar */
+  .statusbar {
+    height: 24px;
+    padding: 0 14px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 10px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .statusbar .modified { color: var(--yellow); }
+
+  /* Drop overlay */
+  .drop-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(14,15,17,.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .drop-overlay.show { display: flex; }
+  .drop-overlay .drop-box {
+    border: 2px dashed var(--accent);
+    border-radius: 16px;
+    padding: 60px 80px;
+    text-align: center;
+  }
+  .drop-overlay .drop-box p { font-size: 18px; color: var(--accent); font-weight: 500; }
+  .drop-overlay .drop-box .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<!-- Drop overlay -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-box">
+    <p>📖 EPUB 파일을 여기에 드롭</p>
+    <p class="sub">.epub 파일만 가능</p>
+  </div>
+</div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="logo">EPUB Editor</div>
+  <span class="fname" id="topFname">파일 미열림</span>
+  <div class="spacer"></div>
+  <button class="theme-toggle" id="btnTheme" title="테마 전환">☀️</button>
+  <button id="btnOpen">열기</button>
+  <button id="btnSave" class="primary" disabled>저장 (EPUB)</button>
+  <input type="file" id="fileInput" accept=".epub" style="display:none"/>
+</div>
+
+<!-- Layout -->
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      파일 구조
+      <span title="모두 접기">−</span>
+    </div>
+    <div class="file-tree" id="fileTree">
+      <div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center; color:var(--text-dim);">
+        EPUB 파일을 열면<br/>내부 구조가 표시됩니다
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="editor-tabs" id="editorTabs"></div>
+    <div class="editor-wrap" id="editorWrap">
+      <div class="empty-state">
+        <div class="big-icon">📖</div>
+        <p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status bar -->
+<div class="statusbar">
+  <span id="statusFile">—</span>
+  <span id="statusType">—</span>
+  <span id="statusModified"></span>
+  <div style="flex:1"></div>
+  <span id="statusSize">—</span>
+</div>
+
+<script>
+  // ─── STATE ───
+  let zip = null;
+  let files = {};        // path -> Uint8Array | string
+  let fileTypes = {};    // path -> 'html'|'css'|'image'|'opf'|'xml'|'other'
+  let openTabs = [];     // [{path, active}]
+  let activeTab = null;
+  let modifiedFiles = new Set();
+  let tocEntries = [];   // [{label, target, depth}]
+  let tocFilePath = null;
+  let opfPath = null;
+  let spine = [];        // ordered html paths from OPF spine
+
+  // ─── ELEMENTS ───
+  const fileInput = document.getElementById('fileInput');
+  const btnOpen = document.getElementById('btnOpen');
+  const btnSave = document.getElementById('btnSave');
+  const topFname = document.getElementById('topFname');
+  const fileTree = document.getElementById('fileTree');
+  const editorTabs = document.getElementById('editorTabs');
+  const editorWrap = document.getElementById('editorWrap');
+  const statusFile = document.getElementById('statusFile');
+  const statusType = document.getElementById('statusType');
+  const statusModified = document.getElementById('statusModified');
+  const statusSize = document.getElementById('statusSize');
+  const dropOverlay = document.getElementById('dropOverlay');
+  const btnTheme = document.getElementById('btnTheme');
+
+  // ─── THEME TOGGLE ───
+  btnTheme.addEventListener('click', () => {
+    const isLight = document.documentElement.classList.toggle('light');
+    btnTheme.textContent = isLight ? '☀️' : '🌙';
+  });
+
+  // ─── OPEN ───
+  btnOpen.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    if(e.target.files[0]) loadEpub(e.target.files[0]);
+  });
+
+  // ─── DRAG & DROP ───
+  document.body.addEventListener('dragover', e => { e.preventDefault(); dropOverlay.classList.add('show'); });
+  document.body.addEventListener('dragleave', e => { if(e.relatedTarget === null) dropOverlay.classList.remove('show'); });
+  document.body.addEventListener('drop', e => {
+    e.preventDefault();
+    dropOverlay.classList.remove('show');
+    const f = e.dataTransfer.files[0];
+    if(f && f.name.endsWith('.epub')) loadEpub(f);
+  });
+
+  let currentFileName = 'file.epub';
+
+  async function loadEpub(file) {
+    currentFileName = file.name;
+    topFname.textContent = file.name;
+    try {
+      zip = await JSZip.loadAsync(file);
+    } catch(e) {
+      alert('EPUB 파일을 읽을 수 없습니다:\n' + e.message);
+      return;
+    }
+    files = {};
+    fileTypes = {};
+    modifiedFiles.clear();
+    openTabs = [];
+    activeTab = null;
+    tocEntries = [];
+    tocFilePath = null;
+    opfPath = null;
+    spine = [];
+
+    // Read all files
+    const names = Object.keys(zip.files).filter(n => !zip.files[n].dir);
+    for(const name of names) {
+      const ext = getExt(name).toLowerCase();
+      if(['jpg','jpeg','png','gif','svg','webp'].includes(ext)) {
+        files[name] = await zip.files[name].async('uint8array');
+        fileTypes[name] = 'image';
+      } else {
+        files[name] = await zip.files[name].async('string');
+        if(ext === 'css') fileTypes[name] = 'css';
+        else if(['xhtml','html','htm'].includes(ext)) fileTypes[name] = 'html';
+        else if(ext === 'opf') fileTypes[name] = 'opf';
+        else if(ext === 'xml') fileTypes[name] = 'xml';
+        else fileTypes[name] = 'other';
+      }
+    }
+
+    // Find OPF
+    parseContainer();
+    // Parse OPF for spine
+    if(opfPath && files[opfPath]) parseOpf(files[opfPath]);
+    // Find & parse TOC (NCX or nav)
+    findToc();
+
+    renderFileTree();
+    renderTabs();
+    renderEditor();
+    btnSave.disabled = false;
+    updateStatus();
+  }
+
+  function parseContainer() {
+    const c = files['META-INF/container.xml'];
+    if(!c) return;
+    const m = c.match(/full-path="([^"]+)"/i);
+    if(m) opfPath = m[1];
+  }
+
+  function parseOpf(opfContent) {
+    spine = [];
+    const spineMatch = opfContent.match(/<spine[^>]*>([\s\S]*?)<\/spine>/i);
+    if(!spineMatch) return;
+    const idrefMatches = [...spineMatch[1].matchAll(/idref="([^"]+)"/g)];
+    // Build id->href map from manifest
+    const manifest = opfContent.match(/<manifest[^>]*>([\s\S]*?)<\/manifest>/i);
+    if(!manifest) return;
+    const items = [...manifest[1].matchAll(/<item[^>]*>/g)];
+    const idMap = {};
+    for(const item of items) {
+      const id = item[0].match(/id="([^"]+)"/);
+      const href = item[0].match(/href="([^"]+)"/);
+      if(id && href) idMap[id[1]] = href[1];
+    }
+    const opfDir = opfPath.includes('/') ? opfPath.split('/').slice(0,-1).join('/') + '/' : '';
+    for(const ref of idrefMatches) {
+      const href = idMap[ref[1]];
+      if(href) {
+        let resolved = opfDir + decodeURIComponent(href);
+        // normalize path
+        resolved = normalizePath(resolved);
+        if(files[resolved]) spine.push(resolved);
+      }
+    }
+  }
+
+  function normalizePath(p) {
+    const parts = p.split('/');
+    const res = [];
+    for(const part of parts) {
+      if(part === '..') res.pop();
+      else if(part !== '.') res.push(part);
+    }
+    return res.join('/');
+  }
+
+  function findToc() {
+    // Try nav (EPUB3)
+    for(const path in files) {
+      if(fileTypes[path] === 'html') {
+        const content = files[path];
+        if(content.includes('epub:type="nav"') || content.includes('properties="nav"')) {
+          tocFilePath = path;
+          parseTocNav(content, path);
+          return;
+        }
+      }
+    }
+    // Try NCX (EPUB2)
+    for(const path in files) {
+      if(path.endsWith('.ncx')) {
+        tocFilePath = path;
+        parseTocNcx(files[path], path);
+        return;
+      }
+    }
+  }
+
+  function parseTocNav(html, navPath) {
+    tocEntries = [];
+    const navDir = navPath.includes('/') ? navPath.split('/').slice(0,-1).join('/') + '/' : '';
+    // Find <nav epub:type="toc"> or <nav> containing <ol>
+    const navMatch = html.match(/<nav[^>]*(?:epub:type="toc"|class="[^"]*toc[^"]*")[^>]*>([\s\S]*?)<\/nav>/i)
+                  || html.match(/<nav[^>]*>([\s\S]*?)<\/nav>/i);
+    if(!navMatch) return;
+    const navContent = navMatch[1];
+    parseOl(navContent, 0, navDir);
+  }
+
+  function parseOl(html, depth, baseDir) {
+    const olMatch = html.match(/<ol[^>]*>([\s\S]*?)<\/ol>/i);
+    if(!olMatch) return;
+    const olContent = olMatch[1];
+    // Match <li> elements (non-greedy, handle nested <ol>)
+    const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+    let liMatch;
+    while((liMatch = liRegex.exec(olContent)) !== null) {
+      const liContent = liMatch[1];
+      const aMatch = liContent.match(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i);
+      if(aMatch) {
+        let target = decodeURIComponent(aMatch[1]);
+        const label = aMatch[2].replace(/<[^>]+>/g,'').trim();
+        // Resolve relative path
+        if(!target.startsWith('/') && !target.startsWith('http')) {
+          target = normalizePath(baseDir + target);
+        }
+        tocEntries.push({ label, target, depth });
+      }
+      // Check for nested <ol>
+      const nestedOl = liContent.match(/<ol[^>]*>[\s\S]*?<\/ol>/i);
+      if(nestedOl) {
+        parseOl(nestedOl[0], depth + 1, baseDir);
+      }
+    }
+  }
+
+  function parseTocNcx(xml, ncxPath) {
+    tocEntries = [];
+    const ncxDir = ncxPath.includes('/') ? ncxPath.split('/').slice(0,-1).join('/') + '/' : '';
+    const navPointRegex = /<navPoint[^>]*playOrder="(\d+)"[^>]*>([\s\S]*?)<\/navPoint>/gi;
+    let m;
+    while((m = navPointRegex.exec(xml)) !== null) {
+      const content = m[2];
+      const labelMatch = content.match(/<navLabel[^>]*>[\s\S]*?<text[^>]*>([\s\S]*?)<\/text>/i);
+      const targetMatch = content.match(/<content[^>]*src="([^"]+)"/i);
+      if(labelMatch && targetMatch) {
+        const label = labelMatch[1].trim();
+        let target = decodeURIComponent(targetMatch[1]);
+        if(!target.startsWith('/') && !target.startsWith('http')) {
+          target = normalizePath(ncxDir + target);
+        }
+        tocEntries.push({ label, target, depth: 0 });
+      }
+    }
+  }
+
+  // ─── FILE TREE ───
+  function renderFileTree() {
+    const groups = { toc: [], html: [], css: [], opf: [], image: [], other: [] };
+    const allPaths = Object.keys(files).sort();
+
+    // TOC file first
+    if(tocFilePath) {
+      groups.toc.push(tocFilePath);
+    }
+
+    for(const p of allPaths) {
+      if(p === tocFilePath) continue;
+      const t = fileTypes[p];
+      if(t === 'html') groups.html.push(p);
+      else if(t === 'css') groups.css.push(p);
+      else if(t === 'opf') groups.opf.push(p);
+      else if(t === 'image') groups.image.push(p);
+      else groups.other.push(p);
+    }
+
+    // Sort html by spine order
+    if(spine.length) {
+      groups.html.sort((a,b) => {
+        const ai = spine.indexOf(a), bi = spine.indexOf(b);
+        if(ai === -1 && bi === -1) return a.localeCompare(b);
+        if(ai === -1) return 1;
+        if(bi === -1) return -1;
+        return ai - bi;
+      });
+    }
+
+    let html = '';
+    const groupLabels = { toc:'목차 (TOC)', html:'챕터 (HTML)', css:'스타일시트 (CSS)', opf:'패키지 (OPF)', image:'이미지', other:'기타' };
+    for(const [key, paths] of Object.entries(groups)) {
+      if(!paths.length) continue;
+      html += `<div class="file-group-label">${groupLabels[key]}</div>`;
+      for(const p of paths) {
+        const icon = key === 'toc' ? '📑' : key === 'html' ? '📄' : key === 'css' ? '🎨' : key === 'opf' ? '📦' : key === 'image' ? '🖼️' : '📁';
+        const active = activeTab === p ? 'active' : '';
+        const mod = modifiedFiles.has(p) ? '<span class="tag" style="color:var(--yellow);background:rgba(251,191,36,.12)">수정</span>' : '';
+        const shortName = p.split('/').pop();
+        html += `<div class="file-item ${active}" onclick="openFile('${p.replace(/'/g,"\\'")}')">${icon} <span style="overflow:hidden;text-overflow:ellipsis;">${shortName}</span>${mod}</div>`;
+      }
+    }
+    fileTree.innerHTML = html;
+  }
+
+  // ─── TABS ───
+  let forceRawEditor = false; // _raw 플래그
+
+  function openFile(path) {
+    // "소스 코드 보기" 버튼에서 _raw 접미사로 호출되면, TOC 에디터 대신 코드 에디터로 강제 표시
+    if(path.endsWith('_raw')) {
+      path = path.slice(0, -4);
+      forceRawEditor = true;
+    } else {
+      forceRawEditor = false;
+    }
+    if(!openTabs.find(t => t.path === path)) {
+      openTabs.push({ path });
+    }
+    activeTab = path;
+    renderTabs();
+    renderEditor();
+    renderFileTree();
+    updateStatus();
+  }
+
+  function closeTab(path, e) {
+    e.stopPropagation();
+    openTabs = openTabs.filter(t => t.path !== path);
+    if(activeTab === path) {
+      activeTab = openTabs.length ? openTabs[openTabs.length-1].path : null;
+    }
+    renderTabs();
+    renderEditor();
+    renderFileTree();
+    updateStatus();
+  }
+
+  function renderTabs() {
+    let html = '';
+    for(const tab of openTabs) {
+      const active = tab.path === activeTab ? 'active' : '';
+      const shortName = tab.path.split('/').pop();
+      const mod = modifiedFiles.has(tab.path) ? ' •' : '';
+      html += `<div class="tab ${active}" onclick="openFile('${tab.path.replace(/'/g,"\\'")}')">${shortName}${mod}<span class="close" onclick="closeTab('${tab.path.replace(/'/g,"\\'")}', event)">×</span></div>`;
+    }
+    editorTabs.innerHTML = html;
+  }
+
+  // ─── EDITOR ───
+  function renderEditor() {
+    if(!activeTab) {
+      editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p></div>`;
+      return;
+    }
+
+    // Special: TOC editor (forceRawEditor이면 코드 에디터로 강제)
+    if(activeTab === tocFilePath && !forceRawEditor) {
+      renderTocEditor();
+      return;
+    }
+    forceRawEditor = false; // 사용 후 리셋
+
+    const type = fileTypes[activeTab];
+
+    if(type === 'image') {
+      renderImagePreview();
+      return;
+    }
+
+    // Text editor (html, css, opf, xml, other)
+    const content = typeof files[activeTab] === 'string' ? files[activeTab] : '';
+    editorWrap.innerHTML = `<textarea class="code-editor" id="codeEditor" spellcheck="false"></textarea>`;
+    const editor = document.getElementById('codeEditor');
+    editor.value = content;
+    editor.addEventListener('input', () => {
+      files[activeTab] = editor.value;
+      modifiedFiles.add(activeTab);
+      // 코드 에디터에서 TOC 파일을 직접 수정했으면 tocEntries를 다시 파싱 → TOC 에디터와 양방향 동기
+      if(activeTab === tocFilePath) {
+        tocEntries = [];
+        if(editor.value.includes('<nav')) {
+          parseTocNav(editor.value, tocFilePath);
+        } else if(tocFilePath.endsWith('.ncx')) {
+          parseTocNcx(editor.value, tocFilePath);
+        }
+      }
+      renderTabs();
+      renderFileTree();
+      updateStatus();
+    });
+    // Tab key
+    editor.addEventListener('keydown', e => {
+      if(e.key === 'Tab') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 2;
+        editor.dispatchEvent(new Event('input'));
+      }
+    });
+  }
+
+  // ─── TOC EDITOR ───
+  function renderTocEditor() {
+    let itemsHtml = tocEntries.map((entry, i) => `
+      <div class="toc-item" draggable="true" data-idx="${i}">
+        <span class="drag-handle">⠿</span>
+        <div class="toc-indent" style="width:${entry.depth * 20}px"></div>
+        <input type="text" value="${escHtml(entry.label)}" data-idx="${i}" class="toc-label"/>
+        <span class="toc-target" title="${escHtml(entry.target)}">${escHtml(entry.target.split('/').pop())}</span>
+        <button onclick="removeTocEntry(${i})">×</button>
+      </div>
+    `).join('');
+
+    editorWrap.innerHTML = `
+      <div class="toc-editor" id="tocEditor">${itemsHtml}</div>
+      <div class="toc-actions">
+        <button onclick="addTocEntry()">+ 항목 추가</button>
+        <button onclick="saveTocToFile(true); openFile('${tocFilePath.replace(/'/g,"\\'")}_raw')">소스 코드 보기</button>
+      </div>
+    `;
+
+    // Label input events
+    document.querySelectorAll('.toc-label').forEach(input => {
+      input.addEventListener('input', () => {
+        const idx = parseInt(input.dataset.idx);
+        tocEntries[idx].label = input.value;
+        saveTocToFile(true); // 즉시 파일에 동기
+      });
+    });
+
+    // Drag & drop reorder
+    setupTocDrag();
+  }
+
+  function setupTocDrag() {
+    const items = document.querySelectorAll('.toc-item');
+    let dragIdx = null;
+    items.forEach(item => {
+      item.addEventListener('dragstart', e => {
+        dragIdx = parseInt(item.dataset.idx);
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('dragend', () => item.classList.remove('dragging'));
+      item.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      item.addEventListener('drop', e => {
+        e.preventDefault();
+        const dropIdx = parseInt(item.dataset.idx);
+        if(dragIdx === null || dragIdx === dropIdx) return;
+        const moved = tocEntries.splice(dragIdx, 1)[0];
+        tocEntries.splice(dropIdx, 0, moved);
+        saveTocToFile(true); // 즉시 파일에 동기
+        renderTocEditor();
+      });
+    });
+  }
+
+  function addTocEntry() {
+    // Default to first spine item
+    const target = spine.length ? spine[0] : (Object.keys(files).find(p => fileTypes[p]==='html') || '');
+    tocEntries.push({ label: '새 항목', target, depth: 0 });
+    saveTocToFile(true); // 즉시 파일에 동기
+    renderTocEditor();
+  }
+
+  function removeTocEntry(idx) {
+    tocEntries.splice(idx, 1);
+    saveTocToFile(true); // 즉시 파일에 동기
+    renderTocEditor();
+  }
+
+  function saveTocToFile(silent) {
+    if(!tocFilePath) return;
+    // Rebuild nav HTML if it's a nav file
+    if(files[tocFilePath] && files[tocFilePath].includes('<nav')) {
+      rebuildNavHtml();
+    } else if(tocFilePath.endsWith('.ncx')) {
+      rebuildNcxXml();
+    }
+    modifiedFiles.add(tocFilePath);
+    renderTabs();
+    renderFileTree();
+    updateStatus();
+    if(!silent) alert('TOC가 파일에 저장되었습니다.');
+  }
+
+  function rebuildNavHtml() {
+    const original = files[tocFilePath];
+    const navDir = tocFilePath.includes('/') ? tocFilePath.split('/').slice(0,-1).join('/') + '/' : '';
+
+    // Build <ol> content
+    let olItems = '';
+    for(const entry of tocEntries) {
+      const indent = '  '.repeat(entry.depth + 2);
+      let relTarget = entry.target;
+      if(relTarget.startsWith(navDir)) relTarget = relTarget.slice(navDir.length);
+      olItems += `${indent}<li>\n${indent}  <a href="${escHtml(relTarget)}">${escHtml(entry.label)}</a>\n${indent}</li>\n`;
+    }
+    const newOl = `<ol>\n${olItems}    </ol>`;
+
+    // Find outermost <ol>...</ol> by counting depth (handles nested <ol>)
+    const lower = original.toLowerCase();
+    let olStart = lower.indexOf('<ol');
+    if(olStart === -1) { files[tocFilePath] = original; return; }
+
+    let depth = 0;
+    let olEnd = -1;
+    let i = olStart;
+    while(i < original.length) {
+      if(lower.startsWith('<ol', i)) { depth++; i += 3; }
+      else if(lower.startsWith('</ol>', i)) {
+        depth--;
+        if(depth === 0) { olEnd = i + 5; break; }
+        i += 5;
+      }
+      else { i++; }
+    }
+    if(olEnd === -1) { files[tocFilePath] = original; return; }
+
+    const newContent = original.slice(0, olStart) + newOl + original.slice(olEnd);
+    files[tocFilePath] = newContent;
+  }
+
+  function rebuildNcxXml() {
+    const original = files[tocFilePath];
+    const ncxDir = tocFilePath.includes('/') ? tocFilePath.split('/').slice(0,-1).join('/') + '/' : '';
+    let navPoints = '';
+    tocEntries.forEach((entry, i) => {
+      let relTarget = entry.target;
+      if(relTarget.startsWith(ncxDir)) relTarget = relTarget.slice(ncxDir.length);
+      navPoints += `  <navPoint id="navpoint-${i}" playOrder="${i+1}">\n`;
+      navPoints += `    <navLabel><text>${escHtml(entry.label)}</text></navLabel>\n`;
+      navPoints += `    <content src="${escHtml(relTarget)}"/>\n`;
+      navPoints += `  </navPoint>\n`;
+    });
+    const newContent = original.replace(/<navMap[^>]*>[\s\S]*?<\/navMap>/i, `<navMap>\n${navPoints}</navMap>`);
+    files[tocFilePath] = newContent;
+  }
+
+  // ─── IMAGE PREVIEW ───
+  function renderImagePreview() {
+    const data = files[activeTab];
+    const ext = getExt(activeTab).toLowerCase();
+    const mimeMap = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', svg:'image/svg+xml', webp:'image/webp' };
+    const mime = mimeMap[ext] || 'image/png';
+    let src;
+    if(data instanceof Uint8Array) {
+      const blob = new Blob([data], {type: mime});
+      src = URL.createObjectURL(blob);
+    } else {
+      src = 'data:' + mime + ';base64,' + btoa(data);
+    }
+    const sizeStr = data instanceof Uint8Array ? formatBytes(data.byteLength) : formatBytes(data.length);
+
+    editorWrap.innerHTML = `
+      <div class="img-preview-wrap">
+        <img src="${src}" alt="preview"/>
+        <div class="img-meta">${activeTab} · ${sizeStr} · ${ext.toUpperCase()}</div>
+        <div class="img-actions">
+          <button onclick="replaceImage()">교체</button>
+          <button onclick="downloadImage('${src}','${activeTab.split('/').pop()}')">다운로드</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function replaceImage() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files[0];
+      if(!file) return;
+      const arrayBuffer = await file.arrayBuffer();
+      files[activeTab] = new Uint8Array(arrayBuffer);
+      modifiedFiles.add(activeTab);
+      renderEditor();
+      renderTabs();
+      renderFileTree();
+      updateStatus();
+    };
+    input.click();
+  }
+
+  function downloadImage(src, fname) {
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = fname;
+    a.click();
+  }
+
+  // ─── SAVE ───
+  btnSave.addEventListener('click', async () => {
+    if(!zip) return;
+    // Write all files back
+    for(const path in files) {
+      const data = files[path];
+      if(data instanceof Uint8Array) {
+        zip.file(path, data);
+      } else {
+        zip.file(path, data);
+      }
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentFileName;
+    a.click();
+    URL.revokeObjectURL(url);
+    modifiedFiles.clear();
+    renderTabs();
+    renderFileTree();
+    updateStatus();
+  });
+
+  // ─── UTILS ───
+  function getExt(path) {
+    const parts = path.split('.');
+    return parts.length > 1 ? parts[parts.length-1] : '';
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatBytes(b) {
+    if(b < 1024) return b + ' B';
+    if(b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+    return (b/(1024*1024)).toFixed(2) + ' MB';
+  }
+
+  function updateStatus() {
+    statusFile.textContent = activeTab || '—';
+    statusType.textContent = activeTab ? (fileTypes[activeTab] || '—').toUpperCase() : '—';
+    statusModified.textContent = modifiedFiles.size ? `${modifiedFiles.size}개 파일 수정됨` : '';
+    statusModified.className = modifiedFiles.size ? 'modified' : '';
+    if(activeTab && files[activeTab]) {
+      const d = files[activeTab];
+      statusSize.textContent = formatBytes(d instanceof Uint8Array ? d.byteLength : new Blob([d]).size);
+    } else {
+      statusSize.textContent = '—';
+    }
+  }
+</script>
+</body>
+</html>
