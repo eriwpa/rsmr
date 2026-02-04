@@ -3,31 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor</title>
+<title>EPUB Editor v1.2.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
 
   :root {
-    --bg: #0e0f11;
-    --bg2: #161820;
-    --bg3: #1e2130;
-    --bg-hover: #252838;
-    --border: #2a2e3d;
-    --text: #c8ccd8;
-    --text-dim: #5a5f72;
-    --text-bright: #eef0f5;
-    --accent: #7c6aff;
-    --accent2: #5eead4;
-    --accent-dim: rgba(124,106,255,0.15);
-    --red: #f87171;
-    --green: #4ade80;
-    --yellow: #fbbf24;
-    --font-ui: 'Inter Tight', sans-serif;
-    --font-code: 'JetBrains Mono', monospace;
-  }
-
-  :root.light {
     --bg: #f4f5f7;
     --bg2: #ffffff;
     --bg3: #eceef2;
@@ -37,28 +18,30 @@
     --text-dim: #7b8299;
     --text-bright: #1e2130;
     --accent: #5a4fd4;
+    --accent2: #5eead4;
     --accent-dim: rgba(90,79,212,0.1);
     --red: #dc2626;
     --green: #16a34a;
     --yellow: #d97706;
+    --font-ui: 'Inter Tight', 'Malgun Gothic', sans-serif;
+    --font-code: 'JetBrains Mono', monospace;
   }
 
-  .theme-toggle {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 16px;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all .15s;
-    line-height: 1;
+  :root.dark {
+    --bg: #0e0f11;
+    --bg2: #161820;
+    --bg3: #1e2130;
+    --bg-hover: #252838;
+    --border: #2a2e3d;
+    --text: #c8ccd8;
+    --text-dim: #5a5f72;
+    --text-bright: #eef0f5;
+    --accent: #7c6aff;
+    --accent-dim: rgba(124,106,255,0.15);
+    --red: #f87171;
+    --green: #4ade80;
+    --yellow: #fbbf24;
   }
-  .theme-toggle:hover { background: var(--bg-hover); border-color: var(--accent); }
 
   * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -76,7 +59,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    height: 44px;
+    height: 48px;
     padding: 0 16px;
     background: var(--bg2);
     border-bottom: 1px solid var(--border);
@@ -84,10 +67,9 @@
   }
   .topbar .logo {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--accent);
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   .topbar .spacer { flex:1; }
   .topbar button {
@@ -103,30 +85,48 @@
     transition: all .15s;
   }
   .topbar button:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text-bright); }
-  .topbar button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .topbar button.primary:hover { background: #6a58e8; }
+  .topbar button.primary { background: #ffd9df; border-color: #ffd9df; color: #4c4143; }
+  .topbar button.primary:hover { background: #ff8b9a; }
+  .topbar button.open-btn { background: #c4c1ef; border-color: #c4c1ef; color: white; }
+  .topbar button.open-btn:hover { background: #7c6aff; }
+  .topbar button.reset-btn { background: #b3deeb; border-color: #b3deeb; color: white; }
+  .topbar button.reset-btn:hover { background: #69a4b7; }
   .topbar button:disabled { opacity: .35; cursor: default; }
   .topbar .fname {
     font-size: 12px;
     color: var(--text-dim);
-    max-width: 200px;
+    max-width: 250px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .theme-toggle {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+  }
+  .theme-toggle:hover { background: var(--bg-hover); border-color: var(--accent); }
 
   /* ─── LAYOUT ─── */
   .layout {
     display: flex;
-    height: calc(100dvh - 44px);
-    max-height: calc(100vh - 44px - 40px);
-    overflow: auto;
+    height: calc(100dvh - 48px - 28px);
+    overflow: hidden;
   }
 
   /* ─── SIDEBAR ─── */
   .sidebar {
-    width: 400px;
-    min-width: 400px;
+    width: 380px;
+    min-width: 380px;
     background: var(--bg2);
     border-right: 1px solid var(--border);
     display: flex;
@@ -143,34 +143,41 @@
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
+    flex-wrap: wrap;
   }
-  .sidebar-header .sort-controls {
+  .sidebar-header .controls {
     display: flex;
     gap: 4px;
     align-items: center;
+    margin-left: auto;
   }
-  .sidebar-header .sort-btn {
+  .sort-btn, .action-btn {
     cursor: pointer;
     color: var(--text-dim);
-    font-size: 12px;
-    padding: 2px 6px;
+    font-size: 11px;
+    padding: 3px 8px;
     border-radius: 4px;
     transition: all .15s;
     background: transparent;
     border: 1px solid transparent;
+    font-family: var(--font-ui);
+    font-weight: 600;
   }
-  .sidebar-header .sort-btn:hover { 
+  .sort-btn:hover, .action-btn:hover { 
     background: var(--bg3); 
     border-color: var(--border);
     color: var(--text);
   }
-  .sidebar-header .sort-btn.active { 
+  .sort-btn.active { 
     background: var(--accent-dim);
     border-color: var(--accent);
     color: var(--accent);
   }
+  .action-btn.toc-btn { background: #fff3bd; color: #2d3436; border-color: #ffda64; }
+  .action-btn.toc-btn:hover { background: #ffeaa7; border-color: #f39c12; }
+  .action-btn.search-btn { background: #c2f1d6; color: #2c2c2c; border-color: #83d5a6; }
+  .action-btn.search-btn:hover { background: #7ae1a5; border-color: #7ae1a5; }
 
   .file-tree {
     flex: 1;
@@ -184,7 +191,11 @@
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 1px;
+    cursor: pointer;
   }
+  .file-group-label:hover { color: var(--text); }
+  .file-group { margin-bottom: 4px; }
+  .file-group.collapsed .file-group-items { display: none; }
   .file-item {
     display: flex;
     align-items: center;
@@ -196,7 +207,6 @@
     transition: background .12s;
     white-space: nowrap;
     overflow: hidden;
-    position: relative;
   }
   .file-item:hover { background: var(--bg-hover); }
   .file-item.active {
@@ -220,26 +230,24 @@
     color: var(--text-dim);
     font-family: var(--font-code);
     flex-shrink: 0;
-    margin-left: auto;
   }
   .file-item.active .timestamp { color: var(--accent); }
-  .file-item .tag {
-    margin-left: 4px;
+  .file-item.modified { color: var(--red); }
+  .file-item .spine-num {
     font-size: 9px;
-    background: var(--bg3);
-    color: var(--text-dim);
-    padding: 2px 6px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 1px 4px;
     border-radius: 3px;
-    flex-shrink: 0;
+    margin-right: 4px;
   }
-  .file-item.active .tag { background: var(--accent-dim); color: var(--accent); }
 
   /* ─── MAIN ─── */
   .main {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: auto;
+    overflow: hidden;
   }
 
   /* Editor tabs */
@@ -250,9 +258,10 @@
     padding: 6px 10px 0;
     background: var(--bg);
     flex-shrink: 0;
+    overflow-x: auto;
   }
   .tab {
-    padding: 6px 14px;
+    padding: 6px 12px;
     font-size: 11px;
     color: var(--text-dim);
     border-radius: 6px 6px 0 0;
@@ -262,10 +271,12 @@
     font-family: var(--font-ui);
     transition: all .12s;
     white-space: nowrap;
-    max-width: 180px;
+    max-width: 160px;
     overflow: hidden;
     text-overflow: ellipsis;
-    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   .tab:hover { color: var(--text); background: var(--bg3); }
   .tab.active {
@@ -275,10 +286,11 @@
     border-bottom: 1px solid var(--bg2);
     margin-bottom: -1px;
   }
+  .tab.modified::before { content: "●"; color: var(--yellow); margin-right: 4px; }
   .tab .close {
-    margin-left: 8px;
     opacity: .4;
     cursor: pointer;
+    font-size: 14px;
   }
   .tab .close:hover { opacity: 1; color: var(--red); }
 
@@ -288,7 +300,7 @@
     display: flex;
     flex-direction: column;
     border-top: 1px solid var(--border);
-    overflow: auto;
+    overflow: hidden;
     background: var(--bg2);
   }
 
@@ -301,7 +313,7 @@
     font-family: var(--font-code);
     font-size: 13px;
     line-height: 1.7;
-    padding: 16px 20px 80px 20px;
+    padding: 16px 20px;
     resize: none;
     border: none;
     outline: none;
@@ -313,7 +325,7 @@
   /* TOC editor special */
   .toc-editor {
     flex: 1;
-    padding: 20px 20px 40px 20px;
+    padding: 20px;
     overflow-y: auto;
     background: var(--bg);
   }
@@ -326,12 +338,12 @@
     border: 1px solid transparent;
     transition: all .12s;
     cursor: grab;
+    margin-bottom: 4px;
   }
   .toc-item:hover { border-color: var(--border); background: var(--bg3); }
   .toc-item.dragging { opacity: .4; }
   .toc-item .drag-handle { color: var(--text-dim); font-size: 14px; cursor: grab; }
-  .toc-item .toc-indent { width: 20px; flex-shrink:0; }
-  .toc-item input {
+  .toc-item input.toc-label {
     flex: 1;
     background: transparent;
     border: none;
@@ -340,18 +352,17 @@
     font-size: 13px;
     outline: none;
   }
-  .toc-item input:focus { border-bottom: 1px solid var(--accent); }
+  .toc-item input.toc-label:focus { border-bottom: 1px solid var(--accent); }
   .toc-item .toc-target {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-dim);
     font-family: var(--font-code);
     background: var(--bg2);
     padding: 2px 8px;
     border-radius: 4px;
-    max-width: 160px;
+    max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .toc-item button {
     background: none;
@@ -361,10 +372,8 @@
     font-size: 14px;
     padding: 2px 6px;
     border-radius: 4px;
-    transition: all .12s;
   }
   .toc-item button:hover { background: var(--bg3); color: var(--red); }
-
   .toc-actions {
     display: flex;
     gap: 8px;
@@ -382,7 +391,6 @@
     padding: 5px 12px;
     border-radius: 5px;
     cursor: pointer;
-    transition: all .15s;
   }
   .toc-actions button:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -410,7 +418,6 @@
     padding: 5px 12px;
     border-radius: 5px;
     cursor: pointer;
-    transition: all .15s;
   }
   .img-actions button:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -429,7 +436,7 @@
 
   /* Status bar */
   .statusbar {
-    height: 24px;
+    height: 28px;
     padding: 0 14px;
     background: var(--bg2);
     border-top: 1px solid var(--border);
@@ -463,62 +470,238 @@
   .drop-overlay .drop-box p { font-size: 18px; color: var(--accent); font-weight: 500; }
   .drop-overlay .drop-box .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
 
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+  }
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-header h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); }
+  .modal-header .close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .modal-header .close-btn:hover { color: var(--red); }
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .modal-footer button {
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text);
+  }
+  .modal-footer button:hover { border-color: var(--accent); }
+  .modal-footer button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .modal-footer button.primary:hover { opacity: 0.9; }
+
+  /* Search modal */
+  .search-input-wrap {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  .search-input-wrap input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .search-input-wrap input:focus { border-color: var(--accent); }
+  .search-options {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 15px;
+  }
+  .search-options label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .search-results {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 350px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .search-result-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .search-result-item:hover { background: var(--bg-hover); }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item .file-header {
+    color: var(--accent);
+    font-weight: 600;
+    padding: 4px 0;
+  }
+  .search-result-item .line-info { color: var(--text-dim); }
+
+  /* TOC Dialog styles */
+  .toc-section {
+    margin-bottom: 20px;
+  }
+  .toc-section-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .toc-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+  }
+  .toc-btn-row button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text);
+  }
+  .toc-btn-row button:hover { border-color: var(--accent); color: var(--accent); }
+  .toc-btn-row button.success { background: #e8f5e9; color: #2e7d32; border-color: #81c784; }
+  .toc-btn-row button.success:hover { background: #c8e6c9; }
+  .toc-tree {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--bg);
+    margin-bottom: 15px;
+  }
+  .toc-tree-item {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toc-tree-item:last-child { border-bottom: none; }
+  .toc-tree-item.level-1 { background: #fff8dc; }
+  .toc-tree-item.level-2 { background: #fffaf0; padding-left: 24px; }
+  .toc-tree-item.level-3 { background: #ffffff; padding-left: 36px; }
+  .new-toc-list {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .new-toc-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: grab;
+    transition: background .1s;
+  }
+  .new-toc-item:hover { background: var(--bg-hover); }
+  .new-toc-item.selected { background: var(--accent-dim); }
+  .new-toc-item.dragging { opacity: 0.5; }
+  .new-toc-item:last-child { border-bottom: none; }
+  .new-toc-item .label { flex: 1; }
+  .new-toc-item .target { 
+    font-size: 10px; 
+    color: var(--text-dim); 
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .new-toc-item .level-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+  .toc-edit-btns {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .toc-edit-btns button {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+  .toc-edit-btns button.danger { background: #ffe5e5; color: #d32f2f; border-color: #ffcdd2; }
+  .toc-edit-btns button.danger:hover { background: #ffcdd2; }
+
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
-  /* 모바일 반응형 */
+  /* Mobile */
   @media (max-width: 768px) {
-    .layout {
-      height: calc(100dvh - 44px - 40px) !important;
-      max-height: calc(100vh - 44px - 40px) !important;
-    }
-
-    .sidebar {
-      width: 200px;
-      min-width: 200px;
-    }
-    
-    .file-item {
-      padding: 5px 8px;
-      font-size: 10px;
-      gap: 6px;
-    }
-    
-    .file-item .icon {
-      font-size: 12px;
-      width: 14px;
-    }
-    
-    .file-item .timestamp {
-      font-size: 8px;
-    }
-    
-    .file-item .tag {
-      display: none;
-    }
-    
-    .sidebar-header {
-      padding: 10px 8px;
-      font-size: 9px;
-    }
-    
-    .file-group-label {
-      padding: 8px 8px 4px;
-      font-size: 8px;
-    }
-
-    .code-editor {
-      padding-bottom: 40px !important;
-    }
-    
-    .toc-editor {
-      padding-bottom: 40px !important;
-    }
+    .sidebar { width: 220px; min-width: 220px; }
+    .file-item { padding: 5px 8px; font-size: 10px; }
+    .file-item .timestamp { display: none; }
   }
-
 </style>
 </head>
 <body>
@@ -531,14 +714,82 @@
   </div>
 </div>
 
+<!-- Search Modal -->
+<div class="modal-overlay" id="searchModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🔍 전체 파일 검색</h3>
+      <button class="close-btn" onclick="closeSearchModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="search-input-wrap">
+        <input type="text" id="searchInput" placeholder="검색할 텍스트를 입력하세요..." onkeypress="if(event.key==='Enter')performSearch()"/>
+        <button onclick="performSearch()" style="padding:10px 20px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;">검색</button>
+      </div>
+      <div class="search-options">
+        <label><input type="checkbox" id="caseSensitive"/> 대소문자 구분</label>
+        <label><input type="checkbox" id="htmlOnly" checked/> HTML 파일만</label>
+      </div>
+      <div style="margin-bottom:10px;font-size:12px;color:var(--text-dim);" id="searchResultCount">검색 결과: 0개</div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeSearchModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOC Dialog Modal -->
+<div class="modal-overlay" id="tocModal">
+  <div class="modal" style="max-width:900px;">
+    <div class="modal-header">
+      <h3>📚 목차 편집</h3>
+      <button class="close-btn" onclick="closeTocModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- Load buttons -->
+      <div class="toc-btn-row">
+        <button class="success" onclick="loadOriginalToc()">📚 원본 목차 불러오기</button>
+        <button onclick="loadTocFromHtml()">📝 목차 찾기 (h1~h6)</button>
+        <button onclick="loadTocFromFile()">📄 html 첫 본문에서 추출</button>
+      </div>
+      
+      <!-- Current TOC -->
+      <div class="toc-section">
+        <div class="toc-section-header">💫 현재 목차 구조</div>
+        <div class="toc-tree" id="currentTocTree"></div>
+      </div>
+      
+      <!-- New TOC -->
+      <div class="toc-section">
+        <div class="toc-section-header">✨ 새 목차 (드래그로 순서 변경, 클릭으로 선택)</div>
+        <div class="new-toc-list" id="newTocList"></div>
+        <div class="toc-edit-btns">
+          <button onclick="moveNewTocItem(-1)">↑ 위로</button>
+          <button onclick="moveNewTocItem(1)">↓ 아래로</button>
+          <button onclick="changeNewTocLevel(-1)">◀ 레벨 높임</button>
+          <button onclick="changeNewTocLevel(1)">▶ 레벨 낮춤</button>
+          <button onclick="editNewTocLabel()">✏️ 제목 수정</button>
+          <button class="danger" onclick="deleteNewTocItem()">🗑️ 삭제</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeTocModal()">취소</button>
+      <button class="primary" onclick="applyNewToc()">적용</button>
+    </div>
+  </div>
+</div>
+
 <!-- Top bar -->
 <div class="topbar">
-  <div class="logo">EPUB Editor</div>
+  <div class="logo">👻 EPUB Editor</div>
   <span class="fname" id="topFname">파일 미열림</span>
   <div class="spacer"></div>
-  <button class="theme-toggle" id="btnTheme" title="테마 전환">☀️</button>
-  <button id="btnOpen">열기</button>
-  <button id="btnSave" class="primary" disabled>저장 (EPUB)</button>
+  <button class="theme-toggle" id="btnTheme" title="테마 전환">🌙</button>
+  <button class="open-btn" id="btnOpen">Open EPUB</button>
+  <button id="btnSave" class="primary" disabled>Save EPUB</button>
+  <button id="btnReset" class="reset-btn" disabled>Reset</button>
   <input type="file" id="fileInput" accept=".epub" style="display:none"/>
 </div>
 
@@ -547,14 +798,17 @@
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
-      파일 구조
-      <div class="sort-controls">
-        <span class="sort-btn" id="sortByName" title="이름순 정렬">A→Z</span>
-        <span class="sort-btn" id="sortByDate" title="날짜순 정렬">📅</span>
+      <span>FILE TREE</span>
+      <div class="controls">
+        <button class="action-btn search-btn" id="btnSearch" disabled onclick="openSearchModal()">Find</button>
+        <button class="action-btn toc-btn" id="btnToc" disabled onclick="openTocModal()">TOC</button>
+        <button class="sort-btn" id="sortSpine" title="Spine 순서">📖</button>
+        <button class="sort-btn active" id="sortType" title="타입별">TYPE</button>
+        <button class="sort-btn" id="sortName" title="이름순">ABC</button>
       </div>
     </div>
     <div class="file-tree" id="fileTree">
-      <div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center; color:var(--text-dim);">
+      <div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">
         EPUB 파일을 열면<br/>내부 구조가 표시됩니다
       </div>
     </div>
@@ -585,345 +839,379 @@
 <script>
   // ─── STATE ───
   let zip = null;
-  let files = {};        // path -> Uint8Array | string
-  let fileTypes = {};    // path -> 'html'|'css'|'image'|'opf'|'xml'|'other'
-  let fileTimestamps = {}; // path -> Date object
-  let openTabs = [];     // [{path, active}]
+  let files = {};
+  let fileTypes = {};
+  let fileTimestamps = {};
+  let openTabs = [];
   let activeTab = null;
   let modifiedFiles = new Set();
-  let tocEntries = [];   // [{label, target, depth}]
+  let tocEntries = [];
+  let newTocEntries = [];
+  let selectedNewTocIndex = -1;
   let tocFilePath = null;
   let opfPath = null;
-  let spine = [];        // ordered html paths from OPF spine
-  let sortMode = 'name'; // 'name' or 'date'
+  let spine = [];
+  let sortMode = 'type';
+  let currentFileName = '';
 
-  // ─── ELEMENTS ───
-  const fileInput = document.getElementById('fileInput');
-  const btnOpen = document.getElementById('btnOpen');
-  const btnSave = document.getElementById('btnSave');
-  const topFname = document.getElementById('topFname');
+  // ─── DOM ───
+  const dropOverlay = document.getElementById('dropOverlay');
   const fileTree = document.getElementById('fileTree');
   const editorTabs = document.getElementById('editorTabs');
   const editorWrap = document.getElementById('editorWrap');
+  const fileInput = document.getElementById('fileInput');
+  const btnOpen = document.getElementById('btnOpen');
+  const btnSave = document.getElementById('btnSave');
+  const btnReset = document.getElementById('btnReset');
+  const btnTheme = document.getElementById('btnTheme');
+  const btnSearch = document.getElementById('btnSearch');
+  const btnToc = document.getElementById('btnToc');
+  const topFname = document.getElementById('topFname');
   const statusFile = document.getElementById('statusFile');
   const statusType = document.getElementById('statusType');
   const statusModified = document.getElementById('statusModified');
   const statusTimestamp = document.getElementById('statusTimestamp');
   const statusSize = document.getElementById('statusSize');
-  const dropOverlay = document.getElementById('dropOverlay');
-  const btnTheme = document.getElementById('btnTheme');
-  const sortByName = document.getElementById('sortByName');
-  const sortByDate = document.getElementById('sortByDate');
 
-  // ─── THEME TOGGLE ───
+  // ─── THEME ───
   btnTheme.addEventListener('click', () => {
-    const isLight = document.documentElement.classList.toggle('light');
-    btnTheme.textContent = isLight ? '☀️' : '🌙';
-  });
-
-  // ─── SORT CONTROLS ───
-  sortByName.addEventListener('click', () => {
-    sortMode = 'name';
-    updateSortButtons();
-    renderFileTree();
-  });
-  sortByDate.addEventListener('click', () => {
-    sortMode = 'date';
-    updateSortButtons();
-    renderFileTree();
-  });
-
-  function updateSortButtons() {
-    sortByName.classList.toggle('active', sortMode === 'name');
-    sortByDate.classList.toggle('active', sortMode === 'date');
-  }
-  updateSortButtons();
-
-  // ─── OPEN ───
-  btnOpen.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', e => {
-    if(e.target.files[0]) loadEpub(e.target.files[0]);
+    document.documentElement.classList.toggle('dark');
+    const isDark = document.documentElement.classList.contains('dark');
+    btnTheme.textContent = isDark ? '🔆' : '🌙';
   });
 
   // ─── DRAG & DROP ───
-  document.body.addEventListener('dragover', e => { e.preventDefault(); dropOverlay.classList.add('show'); });
-  document.body.addEventListener('dragleave', e => { if(e.relatedTarget === null) dropOverlay.classList.remove('show'); });
-  document.body.addEventListener('drop', e => {
+  document.body.addEventListener('dragenter', e => { e.preventDefault(); dropOverlay.classList.add('show'); });
+  document.body.addEventListener('dragleave', e => { if(e.target === dropOverlay) dropOverlay.classList.remove('show'); });
+  document.body.addEventListener('dragover', e => e.preventDefault());
+  document.body.addEventListener('drop', async e => {
     e.preventDefault();
     dropOverlay.classList.remove('show');
-    const f = e.dataTransfer.files[0];
-    if(f && f.name.endsWith('.epub')) loadEpub(f);
+    const file = [...e.dataTransfer.files].find(f => f.name.endsWith('.epub'));
+    if(file) loadEpub(file);
   });
 
-  let currentFileName = 'file.epub';
+  // ─── FILE INPUT ───
+  btnOpen.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if(fileInput.files[0]) loadEpub(fileInput.files[0]);
+  });
 
+  // ─── RESET ───
+  btnReset.addEventListener('click', resetEditor);
+
+  function resetEditor() {
+    zip = null;
+    files = {};
+    fileTypes = {};
+    fileTimestamps = {};
+    openTabs = [];
+    activeTab = null;
+    modifiedFiles.clear();
+    tocEntries = [];
+    newTocEntries = [];
+    tocFilePath = null;
+    opfPath = null;
+    spine = [];
+    currentFileName = '';
+    
+    topFname.textContent = '파일 미열림';
+    btnSave.disabled = true;
+    btnReset.disabled = true;
+    btnSearch.disabled = true;
+    btnToc.disabled = true;
+    
+    fileTree.innerHTML = `
+      <div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">
+        EPUB 파일을 열면<br/>내부 구조가 표시됩니다
+      </div>
+    `;
+    editorTabs.innerHTML = '';
+    editorWrap.innerHTML = `
+      <div class="empty-state">
+        <div class="big-icon">📖</div>
+        <p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
+      </div>
+    `;
+    updateStatus();
+  }
+
+  // ─── SORT BUTTONS ───
+  document.getElementById('sortSpine').addEventListener('click', () => { sortMode = 'spine'; renderFileTree(); updateSortButtons(); });
+  document.getElementById('sortType').addEventListener('click', () => { sortMode = 'type'; renderFileTree(); updateSortButtons(); });
+  document.getElementById('sortName').addEventListener('click', () => { sortMode = 'name'; renderFileTree(); updateSortButtons(); });
+
+  function updateSortButtons() {
+    document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+    if(sortMode === 'spine') document.getElementById('sortSpine').classList.add('active');
+    else if(sortMode === 'type') document.getElementById('sortType').classList.add('active');
+    else document.getElementById('sortName').classList.add('active');
+  }
+
+  // ─── LOAD EPUB ───
   async function loadEpub(file) {
-    currentFileName = file.name;
-    topFname.textContent = file.name;
-    try {
-      zip = await JSZip.loadAsync(file);
-    } catch(e) {
-      alert('EPUB 파일을 읽을 수 없습니다:\n' + e.message);
-      return;
-    }
+    zip = await JSZip.loadAsync(file);
     files = {};
     fileTypes = {};
     fileTimestamps = {};
     modifiedFiles.clear();
     openTabs = [];
     activeTab = null;
+    spine = [];
     tocEntries = [];
     tocFilePath = null;
     opfPath = null;
-    spine = [];
+    currentFileName = file.name;
 
-    // Read all files
-    const names = Object.keys(zip.files).filter(n => !zip.files[n].dir);
-    for(const name of names) {
-      const zipEntry = zip.files[name];
-      const ext = getExt(name).toLowerCase();
-      
-      // Store timestamp
-      fileTimestamps[name] = zipEntry.date;
-      
-      if(['jpg','jpeg','png','gif','svg','webp'].includes(ext)) {
-        files[name] = await zipEntry.async('uint8array');
-        fileTypes[name] = 'image';
+    for(const [path, zipEntry] of Object.entries(zip.files)) {
+      if(zipEntry.dir) continue;
+      fileTimestamps[path] = zipEntry.date;
+      const ext = getExt(path).toLowerCase();
+      const textExts = ['html','xhtml','htm','xml','opf','ncx','css','txt','svg','js','json'];
+      if(textExts.includes(ext)) {
+        files[path] = await zipEntry.async('string');
+        detectFileType(path);
       } else {
-        files[name] = await zipEntry.async('string');
-        if(ext === 'css') fileTypes[name] = 'css';
-        else if(['xhtml','html','htm'].includes(ext)) fileTypes[name] = 'html';
-        else if(ext === 'opf') fileTypes[name] = 'opf';
-        else if(ext === 'xml') fileTypes[name] = 'xml';
-        else fileTypes[name] = 'other';
+        files[path] = await zipEntry.async('uint8array');
+        fileTypes[path] = getBinaryType(path);
       }
     }
 
-    // Find OPF
-    parseContainer();
-    // Parse OPF for spine
-    if(opfPath && files[opfPath]) parseOpf(files[opfPath]);
-    // Find & parse TOC (NCX or nav)
-    findToc();
-
+    parseEpubStructure();
     renderFileTree();
     renderTabs();
-    renderEditor();
+
+    topFname.textContent = `${currentFileName} · ${formatBytes(file.size)}`;
     btnSave.disabled = false;
-    updateStatus();
+    btnReset.disabled = false;
+    btnSearch.disabled = false;
+    btnToc.disabled = false;
   }
 
-  function parseContainer() {
-    const c = files['META-INF/container.xml'];
-    if(!c) return;
-    const m = c.match(/full-path="([^"]+)"/i);
-    if(m) opfPath = m[1];
+  function detectFileType(path) {
+    const content = files[path];
+    const lower = path.toLowerCase();
+    if(lower.endsWith('.opf') || (typeof content === 'string' && content.includes('<package'))) fileTypes[path] = 'opf';
+    else if(lower.endsWith('.ncx')) fileTypes[path] = 'ncx';
+    else if(lower.endsWith('.html') || lower.endsWith('.xhtml') || lower.endsWith('.htm')) fileTypes[path] = 'html';
+    else if(lower.endsWith('.css')) fileTypes[path] = 'css';
+    else if(lower.endsWith('.xml')) fileTypes[path] = 'xml';
+    else fileTypes[path] = 'text';
   }
 
-  function parseOpf(opfContent) {
-    spine = [];
-    const spineMatch = opfContent.match(/<spine[^>]*>([\s\S]*?)<\/spine>/i);
-    if(!spineMatch) return;
-    const idrefMatches = [...spineMatch[1].matchAll(/idref="([^"]+)"/g)];
-    // Build id->href map from manifest
-    const manifest = opfContent.match(/<manifest[^>]*>([\s\S]*?)<\/manifest>/i);
-    if(!manifest) return;
-    const items = [...manifest[1].matchAll(/<item[^>]*>/g)];
-    const idMap = {};
-    for(const item of items) {
-      const id = item[0].match(/id="([^"]+)"/);
-      const href = item[0].match(/href="([^"]+)"/);
-      if(id && href) idMap[id[1]] = href[1];
+  function getBinaryType(path) {
+    const ext = getExt(path).toLowerCase();
+    if(['jpg','jpeg','png','gif','svg','webp'].includes(ext)) return 'image';
+    if(['ttf','otf','woff','woff2'].includes(ext)) return 'font';
+    return 'binary';
+  }
+
+  // ─── PARSE EPUB STRUCTURE ───
+  function parseEpubStructure() {
+    // Find OPF
+    const containerPath = 'META-INF/container.xml';
+    if(files[containerPath]) {
+      const match = files[containerPath].match(/full-path\s*=\s*["']([^"']+)["']/i);
+      if(match) opfPath = match[1];
     }
+    if(!opfPath) {
+      for(const p in fileTypes) {
+        if(fileTypes[p] === 'opf') { opfPath = p; break; }
+      }
+    }
+    if(!opfPath) {
+      for(const p in files) {
+        if(p.toLowerCase().endsWith('.opf')) { opfPath = p; fileTypes[p] = 'opf'; break; }
+      }
+    }
+
+    if(!opfPath || !files[opfPath]) return;
+
+    const content = files[opfPath];
     const opfDir = opfPath.includes('/') ? opfPath.split('/').slice(0,-1).join('/') + '/' : '';
-    for(const ref of idrefMatches) {
-      const href = idMap[ref[1]];
-      if(href) {
-        let resolved = opfDir + decodeURIComponent(href);
-        // normalize path
-        resolved = normalizePath(resolved);
-        if(files[resolved]) spine.push(resolved);
+
+    // Parse spine
+    const idrefs = [...content.matchAll(/<itemref\s+[^>]*idref\s*=\s*["']([^"']+)["']/gi)].map(m => m[1]);
+    const idToHref = {};
+    for(const m of content.matchAll(/<item[^>]+id\s*=\s*["']([^"']+)["'][^>]+href\s*=\s*["']([^"']+)["']/gi)) {
+      idToHref[m[1]] = m[2];
+    }
+    for(const m of content.matchAll(/<item[^>]+href\s*=\s*["']([^"']+)["'][^>]+id\s*=\s*["']([^"']+)["']/gi)) {
+      idToHref[m[2]] = m[1];
+    }
+    spine = idrefs.map(id => idToHref[id] ? (opfDir + idToHref[id]).replace('//','/') : null).filter(Boolean);
+
+    // Find TOC
+    for(const p in files) {
+      if(p.toLowerCase().includes('nav.xhtml') || p.toLowerCase().includes('toc.ncx')) {
+        tocFilePath = p;
+        parseToc(p);
+        break;
       }
     }
   }
 
-  function normalizePath(p) {
-    const parts = p.split('/');
-    const res = [];
-    for(const part of parts) {
-      if(part === '..') res.pop();
-      else if(part !== '.') res.push(part);
-    }
-    return res.join('/');
-  }
-
-  function findToc() {
-    // Try nav (EPUB3)
-    for(const path in files) {
-      if(fileTypes[path] === 'html') {
-        const content = files[path];
-        if(content.includes('epub:type="nav"') || content.includes('properties="nav"')) {
-          tocFilePath = path;
-          parseTocNav(content, path);
-          return;
-        }
-      }
-    }
-    // Try NCX (EPUB2)
-    for(const path in files) {
-      if(path.endsWith('.ncx')) {
-        tocFilePath = path;
-        parseTocNcx(files[path], path);
-        return;
-      }
-    }
-  }
-
-  function parseTocNav(html, navPath) {
+  function parseToc(path) {
+    const content = files[path];
     tocEntries = [];
-    const navDir = navPath.includes('/') ? navPath.split('/').slice(0,-1).join('/') + '/' : '';
-    // Find <nav epub:type="toc"> or <nav> containing <ol>
-    const navMatch = html.match(/<nav[^>]*(?:epub:type="toc"|class="[^"]*toc[^"]*")[^>]*>([\s\S]*?)<\/nav>/i)
-                  || html.match(/<nav[^>]*>([\s\S]*?)<\/nav>/i);
-    if(!navMatch) return;
-    const navContent = navMatch[1];
-    parseOl(navContent, 0, navDir);
-  }
+    const tocDir = path.includes('/') ? path.split('/').slice(0,-1).join('/') + '/' : '';
 
-  function parseOl(html, depth, baseDir) {
-    const olMatch = html.match(/<ol[^>]*>([\s\S]*?)<\/ol>/i);
-    if(!olMatch) return;
-    const olContent = olMatch[1];
-    // Match <li> elements (non-greedy, handle nested <ol>)
-    const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-    let liMatch;
-    while((liMatch = liRegex.exec(olContent)) !== null) {
-      const liContent = liMatch[1];
-      const aMatch = liContent.match(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i);
-      if(aMatch) {
-        let target = decodeURIComponent(aMatch[1]);
-        const label = aMatch[2].replace(/<[^>]+>/g,'').trim();
-        // Resolve relative path
-        if(!target.startsWith('/') && !target.startsWith('http')) {
-          target = normalizePath(baseDir + target);
+    if(path.endsWith('.ncx')) {
+      // Parse NCX - handle hierarchy
+      const navPointRegex = /<navPoint[^>]*>([\s\S]*?)<\/navPoint>/gi;
+      const parseNavPoints = (str, level = 1) => {
+        const results = [];
+        let match;
+        const regex = /<navPoint[^>]*>([\s\S]*?)<\/navPoint>/gi;
+        while((match = regex.exec(str)) !== null) {
+          const inner = match[1];
+          const labelMatch = inner.match(/<navLabel>\s*<text>([^<]+)<\/text>\s*<\/navLabel>/i);
+          const srcMatch = inner.match(/<content\s+src="([^"]+)"/i);
+          if(labelMatch && srcMatch) {
+            const entry = {
+              label: labelMatch[1],
+              content: tocDir + srcMatch[1],
+              level: level,
+              children: []
+            };
+            // Find nested navPoints
+            const nestedMatch = inner.match(/<navPoint[\s\S]*<\/navPoint>/gi);
+            if(nestedMatch) {
+              entry.children = parseNavPoints(nestedMatch.join(''), level + 1);
+            }
+            results.push(entry);
+          }
         }
-        tocEntries.push({ label, target, depth });
+        return results;
+      };
+      // Simple flat parsing for now
+      for(const m of content.matchAll(/<navLabel>\s*<text>([^<]+)<\/text>\s*<\/navLabel>\s*<content\s+src="([^"]+)"/gi)) {
+        tocEntries.push({ label: m[1], content: tocDir + m[2], level: 1 });
       }
-      // Check for nested <ol>
-      const nestedOl = liContent.match(/<ol[^>]*>[\s\S]*?<\/ol>/i);
-      if(nestedOl) {
-        parseOl(nestedOl[0], depth + 1, baseDir);
-      }
-    }
-  }
-
-  function parseTocNcx(xml, ncxPath) {
-    tocEntries = [];
-    const ncxDir = ncxPath.includes('/') ? ncxPath.split('/').slice(0,-1).join('/') + '/' : '';
-    const navPointRegex = /<navPoint[^>]*playOrder="(\d+)"[^>]*>([\s\S]*?)<\/navPoint>/gi;
-    let m;
-    while((m = navPointRegex.exec(xml)) !== null) {
-      const content = m[2];
-      const labelMatch = content.match(/<navLabel[^>]*>[\s\S]*?<text[^>]*>([\s\S]*?)<\/text>/i);
-      const targetMatch = content.match(/<content[^>]*src="([^"]+)"/i);
-      if(labelMatch && targetMatch) {
-        const label = labelMatch[1].trim();
-        let target = decodeURIComponent(targetMatch[1]);
-        if(!target.startsWith('/') && !target.startsWith('http')) {
-          target = normalizePath(ncxDir + target);
-        }
-        tocEntries.push({ label, target, depth: 0 });
-      }
-    }
-  }
-
-  // ─── FILE TREE ───
-  function renderFileTree() {
-    const groups = { html: [], css: [], opf: [], toc: [], image: [], other: [] };
-    const allPaths = Object.keys(files);
-
-    // TOC file after OPF
-    if(tocFilePath) {
-      groups.toc.push(tocFilePath);
-    }
-
-    for(const p of allPaths) {
-      if(p === tocFilePath) continue;
-      const t = fileTypes[p];
-      if(t === 'html') groups.html.push(p);
-      else if(t === 'css') groups.css.push(p);
-      else if(t === 'opf') groups.opf.push(p);
-      else if(t === 'image') groups.image.push(p);
-      else groups.other.push(p);
-    }
-
-    // Apply sort
-    const sortFn = sortMode === 'date' 
-      ? (a, b) => (fileTimestamps[b] || 0) - (fileTimestamps[a] || 0)
-      : (a, b) => a.localeCompare(b);
-
-    // Sort html by spine order if name mode, otherwise by date
-    if(sortMode === 'name' && spine.length) {
-      groups.html.sort((a,b) => {
-        const ai = spine.indexOf(a), bi = spine.indexOf(b);
-        if(ai === -1 && bi === -1) return a.localeCompare(b);
-        if(ai === -1) return 1;
-        if(bi === -1) return -1;
-        return ai - bi;
-      });
     } else {
-      groups.html.sort(sortFn);
-    }
-
-    groups.css.sort(sortFn);
-    groups.opf.sort(sortFn);
-    groups.image.sort(sortFn);
-    groups.other.sort(sortFn);
-
-    let html = '';
-    const groupLabels = { html:'챕터 (HTML)', css:'스타일시트 (CSS)', opf:'패키지 (OPF)', toc:'목차 (TOC)', image:'이미지', other:'기타' };
-    for(const [key, paths] of Object.entries(groups)) {
-      if(!paths.length) continue;
-      html += `<div class="file-group-label">${groupLabels[key]}</div>`;
-      for(const p of paths) {
-        const icon = key === 'toc' ? '📑' : key === 'html' ? '📄' : key === 'css' ? '🎨' : key === 'opf' ? '📦' : key === 'image' ? '🖼️' : '📁';
-        const active = activeTab === p ? 'active' : '';
-        const mod = modifiedFiles.has(p) ? '<span class="tag" style="color:var(--yellow);background:rgba(251,191,36,.12)">수정</span>' : '';
-        const shortName = p.split('/').pop();
-        const timestamp = fileTimestamps[p] ? formatTimestamp(fileTimestamps[p]) : '';
-        html += `<div class="file-item ${active}" onclick="openFile('${p.replace(/'/g,"\\'")}')" title="${escHtml(p)}">
-          <span class="icon">${icon}</span>
-          <span class="file-name">${escHtml(shortName)}</span>
-          ${timestamp ? `<span class="timestamp">${timestamp}</span>` : ''}
-          ${mod}
-        </div>`;
+      // Parse nav.xhtml
+      for(const m of content.matchAll(/<a\s+href="([^"]+)">([^<]+)<\/a>/gi)) {
+        tocEntries.push({ label: m[2], content: tocDir + m[1], level: 1 });
       }
     }
-    fileTree.innerHTML = html;
   }
 
-  function formatTimestamp(date) {
-    if(!date) return '';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  // ─── RENDER FILE TREE ───
+  function renderFileTree() {
+    if(!Object.keys(files).length) return;
+
+    const allFiles = Object.keys(files).map(p => ({ path: p, type: fileTypes[p] || 'other' }));
+    let html = '';
+
+    if(sortMode === 'spine') {
+      // Spine files first
+      const spineFiles = spine.filter(p => files[p]);
+      const otherFiles = allFiles.filter(f => !spine.includes(f.path)).sort((a,b) => naturalSort(a.path, b.path));
+      
+      spineFiles.forEach((path, idx) => {
+        const f = { path, type: fileTypes[path] };
+        html += renderFileItem(f, idx + 1);
+      });
+      if(otherFiles.length) {
+        html += `<div class="file-group-label">기타 파일 (${otherFiles.length})</div>`;
+        otherFiles.forEach(f => { html += renderFileItem(f); });
+      }
+    } else if(sortMode === 'name') {
+      allFiles.sort((a,b) => naturalSort(a.path, b.path));
+      allFiles.forEach(f => { html += renderFileItem(f); });
+    } else {
+      // Group by type
+      const groups = {};
+      const groupOrder = ['html','css','image','xml','opf','ncx','font','text','binary'];
+      const groupNames = { html:'Text', css:'Styles', image:'Images', xml:'XML', opf:'OPF', ncx:'NCX', font:'Fonts', text:'Etc', binary:'Binary' };
+      allFiles.forEach(f => {
+        if(!groups[f.type]) groups[f.type] = [];
+        groups[f.type].push(f);
+      });
+      groupOrder.forEach(type => {
+        if(!groups[type]) return;
+        groups[type].sort((a,b) => naturalSort(a.path, b.path));
+        html += `<div class="file-group">
+          <div class="file-group-label" onclick="this.parentElement.classList.toggle('collapsed')">📁 ${groupNames[type] || type.toUpperCase()} (${groups[type].length})</div>
+          <div class="file-group-items">${groups[type].map(f => renderFileItem(f)).join('')}</div>
+        </div>`;
+      });
+    }
+
+    fileTree.innerHTML = html;
+    fileTree.querySelectorAll('.file-item').forEach(el => {
+      el.addEventListener('click', () => openFile(el.dataset.path));
+    });
+  }
+
+  function renderFileItem(f, spineIndex = null) {
+    const icon = getFileIcon(f.type);
+    const name = f.path.split('/').pop();
+    const ts = fileTimestamps[f.path];
+    const timestamp = ts ? formatTimestamp(ts) : '';
+    const isActive = activeTab === f.path;
+    const isModified = modifiedFiles.has(f.path);
+    
+    let classes = 'file-item';
+    if(isActive) classes += ' active';
+    if(isModified) classes += ' modified';
+    
+    let spineHtml = spineIndex ? `<span class="spine-num">${spineIndex}</span>` : '';
+    let modIcon = isModified ? '🔴 ' : '';
+    
+    return `<div class="${classes}" data-path="${f.path}">
+      ${spineHtml}
+      <span class="icon">${modIcon}${icon}</span>
+      <span class="file-name">${name}</span>
+      <span class="timestamp">${timestamp}</span>
+    </div>`;
+  }
+
+  function getFileIcon(type) {
+    const icons = { html:'📄', css:'🎨', image:'🖼️', xml:'📋', opf:'📦', ncx:'📑', font:'🔤', text:'📝', binary:'📦' };
+    return icons[type] || '📄';
   }
 
   // ─── TABS ───
-  let forceRawEditor = false; // _raw 플래그
+  function renderTabs() {
+    editorTabs.innerHTML = openTabs.map(tab => {
+      const name = tab.path.split('/').pop();
+      const isActive = tab.path === activeTab;
+      const isModified = modifiedFiles.has(tab.path);
+      let classes = 'tab';
+      if(isActive) classes += ' active';
+      if(isModified) classes += ' modified';
+      return `<div class="${classes}" data-path="${tab.path}">
+        <span class="tab-name">${name}</span>
+        <span class="close" onclick="event.stopPropagation();closeTab('${tab.path.replace(/'/g,"\\'")}')">&times;</span>
+      </div>`;
+    }).join('');
 
-  function openFile(path) {
-    // "소스 코드 보기" 버튼에서 _raw 접미사로 호출되면, TOC 에디터 대신 코드 에디터로 강제 표시
-    if(path.endsWith('_raw')) {
-      path = path.slice(0, -4);
-      forceRawEditor = true;
-    } else {
-      forceRawEditor = false;
+    editorTabs.querySelectorAll('.tab').forEach(el => {
+      el.addEventListener('click', () => {
+        activeTab = el.dataset.path;
+        renderTabs();
+        renderEditor();
+        renderFileTree();
+        updateStatus();
+      });
+    });
+  }
+
+  function closeTab(path) {
+    openTabs = openTabs.filter(t => t.path !== path);
+    if(activeTab === path) {
+      activeTab = openTabs.length ? openTabs[openTabs.length-1].path : null;
     }
+    renderTabs();
+    if(activeTab) renderEditor();
+    else editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>파일을 선택하세요</p></div>`;
+    renderFileTree();
+    updateStatus();
+  }
+
+  // ─── OPEN FILE ───
+  function openFile(path) {
     if(!openTabs.find(t => t.path === path)) {
       openTabs.push({ path });
     }
@@ -934,72 +1222,34 @@
     updateStatus();
   }
 
-  function closeTab(path, e) {
-    e.stopPropagation();
-    openTabs = openTabs.filter(t => t.path !== path);
-    if(activeTab === path) {
-      activeTab = openTabs.length ? openTabs[openTabs.length-1].path : null;
-    }
-    renderTabs();
-    renderEditor();
-    renderFileTree();
-    updateStatus();
-  }
-
-  function renderTabs() {
-    let html = '';
-    for(const tab of openTabs) {
-      const active = tab.path === activeTab ? 'active' : '';
-      const shortName = tab.path.split('/').pop();
-      const mod = modifiedFiles.has(tab.path) ? ' •' : '';
-      html += `<div class="tab ${active}" onclick="openFile('${tab.path.replace(/'/g,"\\'")}')">${shortName}${mod}<span class="close" onclick="closeTab('${tab.path.replace(/'/g,"\\'")}', event)">×</span></div>`;
-    }
-    editorTabs.innerHTML = html;
-  }
-
-  // ─── EDITOR ───
+  // ─── RENDER EDITOR ───
   function renderEditor() {
-    if(!activeTab) {
-      editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p></div>`;
-      return;
-    }
-
-    // Special: TOC editor (forceRawEditor이면 코드 에디터로 강제)
-    if(activeTab === tocFilePath && !forceRawEditor) {
-      renderTocEditor();
-      return;
-    }
-    forceRawEditor = false; // 사용 후 리셋
-
+    if(!activeTab) return;
     const type = fileTypes[activeTab];
 
     if(type === 'image') {
       renderImagePreview();
-      return;
+    } else if(['html','xml','opf','ncx','css','text'].includes(type)) {
+      renderTextEditor();
+    } else {
+      editorWrap.innerHTML = `<div class="empty-state"><p>바이너리 파일은 편집할 수 없습니다</p></div>`;
     }
+  }
 
-    // Text editor (html, css, opf, xml, other)
-    const content = typeof files[activeTab] === 'string' ? files[activeTab] : '';
-    editorWrap.innerHTML = `<textarea class="code-editor" id="codeEditor" spellcheck="false"></textarea>`;
+  function renderTextEditor() {
+    const content = files[activeTab] || '';
+    editorWrap.innerHTML = `<textarea class="code-editor" id="codeEditor">${escHtml(content)}</textarea>`;
     const editor = document.getElementById('codeEditor');
-    editor.value = content;
     editor.addEventListener('input', () => {
       files[activeTab] = editor.value;
-      modifiedFiles.add(activeTab);
-      // 코드 에디터에서 TOC 파일을 직접 수정했으면 tocEntries를 다시 파싱 → TOC 에디터와 양방향 동기
-      if(activeTab === tocFilePath) {
-        tocEntries = [];
-        if(editor.value.includes('<nav')) {
-          parseTocNav(editor.value, tocFilePath);
-        } else if(tocFilePath.endsWith('.ncx')) {
-          parseTocNcx(editor.value, tocFilePath);
-        }
+      if(!modifiedFiles.has(activeTab)) {
+        modifiedFiles.add(activeTab);
+        renderTabs();
+        renderFileTree();
+        updateStatus();
       }
-      renderTabs();
-      renderFileTree();
-      updateStatus();
     });
-    // Tab key
+    // Handle tab key
     editor.addEventListener('keydown', e => {
       if(e.key === 'Tab') {
         e.preventDefault();
@@ -1007,153 +1257,10 @@
         const end = editor.selectionEnd;
         editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
         editor.selectionStart = editor.selectionEnd = start + 2;
-        editor.dispatchEvent(new Event('input'));
       }
     });
   }
 
-  // ─── TOC EDITOR ───
-  function renderTocEditor() {
-    let itemsHtml = tocEntries.map((entry, i) => `
-      <div class="toc-item" draggable="true" data-idx="${i}">
-        <span class="drag-handle">⠿</span>
-        <div class="toc-indent" style="width:${entry.depth * 20}px"></div>
-        <input type="text" value="${escHtml(entry.label)}" data-idx="${i}" class="toc-label"/>
-        <span class="toc-target" title="${escHtml(entry.target)}">${escHtml(entry.target.split('/').pop())}</span>
-        <button onclick="removeTocEntry(${i})">×</button>
-      </div>
-    `).join('');
-
-    editorWrap.innerHTML = `
-      <div class="toc-editor" id="tocEditor">${itemsHtml}</div>
-      <div class="toc-actions">
-        <button onclick="addTocEntry()">+ 항목 추가</button>
-        <button onclick="saveTocToFile(true); openFile('${tocFilePath.replace(/'/g,"\\'")}_raw')">소스 코드 보기</button>
-      </div>
-    `;
-
-    // Label input events
-    document.querySelectorAll('.toc-label').forEach(input => {
-      input.addEventListener('input', () => {
-        const idx = parseInt(input.dataset.idx);
-        tocEntries[idx].label = input.value;
-        saveTocToFile(true); // 즉시 파일에 동기
-      });
-    });
-
-    // Drag & drop reorder
-    setupTocDrag();
-  }
-
-  function setupTocDrag() {
-    const items = document.querySelectorAll('.toc-item');
-    let dragIdx = null;
-    items.forEach(item => {
-      item.addEventListener('dragstart', e => {
-        dragIdx = parseInt(item.dataset.idx);
-        item.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      item.addEventListener('dragend', () => item.classList.remove('dragging'));
-      item.addEventListener('dragover', e => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-      });
-      item.addEventListener('drop', e => {
-        e.preventDefault();
-        const dropIdx = parseInt(item.dataset.idx);
-        if(dragIdx === null || dragIdx === dropIdx) return;
-        const moved = tocEntries.splice(dragIdx, 1)[0];
-        tocEntries.splice(dropIdx, 0, moved);
-        saveTocToFile(true); // 즉시 파일에 동기
-        renderTocEditor();
-      });
-    });
-  }
-
-  function addTocEntry() {
-    // Default to first spine item
-    const target = spine.length ? spine[0] : (Object.keys(files).find(p => fileTypes[p]==='html') || '');
-    tocEntries.push({ label: '새 항목', target, depth: 0 });
-    saveTocToFile(true); // 즉시 파일에 동기
-    renderTocEditor();
-  }
-
-  function removeTocEntry(idx) {
-    tocEntries.splice(idx, 1);
-    saveTocToFile(true); // 즉시 파일에 동기
-    renderTocEditor();
-  }
-
-  function saveTocToFile(silent) {
-    if(!tocFilePath) return;
-    // Rebuild nav HTML if it's a nav file
-    if(files[tocFilePath] && files[tocFilePath].includes('<nav')) {
-      rebuildNavHtml();
-    } else if(tocFilePath.endsWith('.ncx')) {
-      rebuildNcxXml();
-    }
-    modifiedFiles.add(tocFilePath);
-    renderTabs();
-    renderFileTree();
-    updateStatus();
-    if(!silent) alert('TOC가 파일에 저장되었습니다.');
-  }
-
-  function rebuildNavHtml() {
-    const original = files[tocFilePath];
-    const navDir = tocFilePath.includes('/') ? tocFilePath.split('/').slice(0,-1).join('/') + '/' : '';
-
-    // Build <ol> content
-    let olItems = '';
-    for(const entry of tocEntries) {
-      const indent = '  '.repeat(entry.depth + 2);
-      let relTarget = entry.target;
-      if(relTarget.startsWith(navDir)) relTarget = relTarget.slice(navDir.length);
-      olItems += `${indent}<li>\n${indent}  <a href="${escHtml(relTarget)}">${escHtml(entry.label)}</a>\n${indent}</li>\n`;
-    }
-    const newOl = `<ol>\n${olItems}    </ol>`;
-
-    // Find outermost <ol>...</ol> by counting depth (handles nested <ol>)
-    const lower = original.toLowerCase();
-    let olStart = lower.indexOf('<ol');
-    if(olStart === -1) { files[tocFilePath] = original; return; }
-
-    let depth = 0;
-    let olEnd = -1;
-    let i = olStart;
-    while(i < original.length) {
-      if(lower.startsWith('<ol', i)) { depth++; i += 3; }
-      else if(lower.startsWith('</ol>', i)) {
-        depth--;
-        if(depth === 0) { olEnd = i + 5; break; }
-        i += 5;
-      }
-      else { i++; }
-    }
-    if(olEnd === -1) { files[tocFilePath] = original; return; }
-
-    const newContent = original.slice(0, olStart) + newOl + original.slice(olEnd);
-    files[tocFilePath] = newContent;
-  }
-
-  function rebuildNcxXml() {
-    const original = files[tocFilePath];
-    const ncxDir = tocFilePath.includes('/') ? tocFilePath.split('/').slice(0,-1).join('/') + '/' : '';
-    let navPoints = '';
-    tocEntries.forEach((entry, i) => {
-      let relTarget = entry.target;
-      if(relTarget.startsWith(ncxDir)) relTarget = relTarget.slice(ncxDir.length);
-      navPoints += `  <navPoint id="navpoint-${i}" playOrder="${i+1}">\n`;
-      navPoints += `    <navLabel><text>${escHtml(entry.label)}</text></navLabel>\n`;
-      navPoints += `    <content src="${escHtml(relTarget)}"/>\n`;
-      navPoints += `  </navPoint>\n`;
-    });
-    const newContent = original.replace(/<navMap[^>]*>[\s\S]*?<\/navMap>/i, `<navMap>\n${navPoints}</navMap>`);
-    files[tocFilePath] = newContent;
-  }
-
-  // ─── IMAGE PREVIEW ───
   function renderImagePreview() {
     const data = files[activeTab];
     const ext = getExt(activeTab).toLowerCase();
@@ -1208,25 +1315,25 @@
   // ─── SAVE ───
   btnSave.addEventListener('click', async () => {
     if(!zip) return;
-    // Write all files back with original timestamps
+    
+    const mimetimeTime = (zip.files['mimetype'] && zip.files['mimetype'].date) ? zip.files['mimetype'].date : new Date();
+    
     for(const path in files) {
       const data = files[path];
       const options = {};
-      
-      // Preserve original timestamp if file wasn't modified
       if(fileTimestamps[path] && !modifiedFiles.has(path)) {
         options.date = fileTimestamps[path];
-      } else if(fileTimestamps[path]) {
-        // For modified files, use current time
+      } else {
         options.date = new Date();
       }
-      
-      if(data instanceof Uint8Array) {
-        zip.file(path, data, options);
-      } else {
-        zip.file(path, data, options);
-      }
+      zip.file(path, data, options);
     }
+    
+    Object.keys(zip.files).forEach(path => {
+      if(zip.files[path].dir) zip.files[path].date = mimetimeTime;
+    });
+    if(zip.files['mimetype']) zip.files['mimetype'].date = mimetimeTime;
+    
     const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1235,16 +1342,426 @@
     a.click();
     URL.revokeObjectURL(url);
     
-    // Update timestamps for modified files
-    modifiedFiles.forEach(path => {
-      fileTimestamps[path] = new Date();
-    });
-    
+    modifiedFiles.forEach(path => { fileTimestamps[path] = new Date(); });
     modifiedFiles.clear();
     renderTabs();
     renderFileTree();
     updateStatus();
   });
+
+  // ─── SEARCH ───
+  function openSearchModal() {
+    document.getElementById('searchModal').classList.add('show');
+    document.getElementById('searchInput').focus();
+  }
+
+  function closeSearchModal() {
+    document.getElementById('searchModal').classList.remove('show');
+  }
+
+  function performSearch() {
+    const query = document.getElementById('searchInput').value.trim();
+    if(!query) return;
+    
+    const caseSensitive = document.getElementById('caseSensitive').checked;
+    const htmlOnly = document.getElementById('htmlOnly').checked;
+    
+    const results = [];
+    for(const [path, content] of Object.entries(files)) {
+      if(typeof content !== 'string') continue;
+      if(htmlOnly && !path.toLowerCase().match(/\.(html|xhtml)$/)) continue;
+      
+      const lines = content.split('\n');
+      lines.forEach((line, idx) => {
+        const searchLine = caseSensitive ? line : line.toLowerCase();
+        const searchQuery = caseSensitive ? query : query.toLowerCase();
+        if(searchLine.includes(searchQuery)) {
+          results.push({ path, lineNum: idx + 1, text: line.trim().substring(0, 100) });
+        }
+      });
+    }
+    
+    document.getElementById('searchResultCount').textContent = `검색 결과: ${results.length}개`;
+    
+    let html = '';
+    let currentFile = '';
+    results.forEach(r => {
+      if(r.path !== currentFile) {
+        currentFile = r.path;
+        html += `<div class="search-result-item"><div class="file-header">📄 ${r.path}</div></div>`;
+      }
+      html += `<div class="search-result-item" onclick="openFileAtLine('${r.path.replace(/'/g,"\\'")}', ${r.lineNum})">
+        <span class="line-info">Line ${r.lineNum}:</span> ${escHtml(r.text)}
+      </div>`;
+    });
+    
+    document.getElementById('searchResults').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text-dim);">검색 결과가 없습니다</div>';
+  }
+
+  function openFileAtLine(path, lineNum) {
+    closeSearchModal();
+    openFile(path);
+    setTimeout(() => {
+      const editor = document.getElementById('codeEditor');
+      if(editor) {
+        const lines = editor.value.split('\n');
+        let pos = 0;
+        for(let i = 0; i < lineNum - 1 && i < lines.length; i++) {
+          pos += lines[i].length + 1;
+        }
+        editor.focus();
+        editor.setSelectionRange(pos, pos + lines[lineNum-1].length);
+        // Scroll to position
+        const lineHeight = 22;
+        editor.scrollTop = (lineNum - 5) * lineHeight;
+      }
+    }, 100);
+  }
+
+  // Keyboard shortcut
+  document.addEventListener('keydown', e => {
+    if((e.ctrlKey || e.metaKey) && e.key === 'f' && Object.keys(files).length) {
+      e.preventDefault();
+      openSearchModal();
+    }
+  });
+
+  // ─── TOC DIALOG ───
+  function openTocModal() {
+    newTocEntries = [];
+    selectedNewTocIndex = -1;
+    renderCurrentToc();
+    renderNewTocList();
+    document.getElementById('tocModal').classList.add('show');
+  }
+
+  function closeTocModal() {
+    document.getElementById('tocModal').classList.remove('show');
+  }
+
+  function renderCurrentToc() {
+    const container = document.getElementById('currentTocTree');
+    if(!tocEntries.length) {
+      container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);">목차가 없습니다</div>';
+      return;
+    }
+    
+    const levelIcons = ['📕','📙','📒','📗','📘','📓'];
+    container.innerHTML = tocEntries.map(e => {
+      const level = e.level || 1;
+      const icon = levelIcons[Math.min(level-1, 5)];
+      return `<div class="toc-tree-item level-${level}">
+        <span>${icon}</span>
+        <span style="flex:1">${escHtml(e.label)}</span>
+        <span style="font-size:10px;color:var(--text-dim)">${e.content.split('/').pop()}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderNewTocList() {
+    const container = document.getElementById('newTocList');
+    if(!newTocEntries.length) {
+      container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);">목차를 불러오세요</div>';
+      return;
+    }
+    
+    const levelIcons = ['📕','📙','📒','📗','📘','📓'];
+    container.innerHTML = newTocEntries.map((e, idx) => {
+      const level = e.level || 1;
+      const icon = levelIcons[Math.min(level-1, 5)];
+      const indent = '  '.repeat(level - 1);
+      const selected = idx === selectedNewTocIndex ? ' selected' : '';
+      return `<div class="new-toc-item${selected}" data-idx="${idx}" draggable="true">
+        <span>${indent}${icon}</span>
+        <span class="label">${escHtml(e.label)}</span>
+        <span class="target">${e.content.split('/').pop()}</span>
+        <span class="level-badge">Lv${level}</span>
+      </div>`;
+    }).join('');
+    
+    // Add event listeners
+    container.querySelectorAll('.new-toc-item').forEach(el => {
+      el.addEventListener('click', () => {
+        selectedNewTocIndex = parseInt(el.dataset.idx);
+        renderNewTocList();
+      });
+      el.addEventListener('dragstart', e => {
+        el.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', el.dataset.idx);
+      });
+      el.addEventListener('dragend', () => el.classList.remove('dragging'));
+      el.addEventListener('dragover', e => e.preventDefault());
+      el.addEventListener('drop', e => {
+        e.preventDefault();
+        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+        const toIdx = parseInt(el.dataset.idx);
+        if(fromIdx !== toIdx) {
+          const item = newTocEntries.splice(fromIdx, 1)[0];
+          newTocEntries.splice(toIdx, 0, item);
+          selectedNewTocIndex = toIdx;
+          renderNewTocList();
+        }
+      });
+    });
+  }
+
+  function loadOriginalToc() {
+    if(!tocEntries.length) {
+      alert('원본 목차가 없습니다.');
+      return;
+    }
+    newTocEntries = tocEntries.map(e => ({...e}));
+    selectedNewTocIndex = -1;
+    renderNewTocList();
+    alert(`${newTocEntries.length}개의 목차 항목을 불러왔습니다.`);
+  }
+
+  function loadTocFromHtml() {
+    if(!spine.length) {
+      alert('spine 정보가 없습니다.');
+      return;
+    }
+    
+    newTocEntries = [];
+    spine.forEach(filePath => {
+      if(!files[filePath] || typeof files[filePath] !== 'string') return;
+      const content = files[filePath];
+      
+      // Find h1~h6 tags
+      const headingRegex = /<(h[1-6])[^>]*>(.*?)<\/\1>/gi;
+      let match;
+      while((match = headingRegex.exec(content)) !== null) {
+        const level = parseInt(match[1][1]);
+        const text = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        if(text) {
+          newTocEntries.push({ label: text, content: filePath, level });
+        }
+      }
+      
+      // Find class="title", "toc", "chapter"
+      const classRegex = /<(\w+)\s+[^>]*class=["'][^"']*?(title|toc|chapter)[^"']*?["'][^>]*>(.*?)<\/\1>/gi;
+      while((match = classRegex.exec(content)) !== null) {
+        const text = match[3].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        if(text && !newTocEntries.find(e => e.label === text && e.content === filePath)) {
+          newTocEntries.push({ label: text, content: filePath, level: 1 });
+        }
+      }
+    });
+    
+    selectedNewTocIndex = -1;
+    renderNewTocList();
+    alert(`${newTocEntries.length}개의 목차 항목을 찾았습니다.`);
+  }
+
+  function loadTocFromFile() {
+    if(!spine.length) {
+      alert('spine 정보가 없습니다.');
+      return;
+    }
+    
+    newTocEntries = [];
+    spine.forEach(filePath => {
+      if(!files[filePath] || typeof files[filePath] !== 'string') return;
+      const content = files[filePath];
+      
+      // Find body content
+      const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      if(bodyMatch) {
+        const bodyContent = bodyMatch[1];
+        // Find first meaningful text
+        const tagMatch = bodyContent.match(/<(\w+)[^>]*>([\s\S]*?)<\/\1>/);
+        if(tagMatch) {
+          const text = tagMatch[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+          if(text.length >= 1) {
+            newTocEntries.push({ label: text.substring(0, 100), content: filePath, level: 1 });
+          }
+        }
+      }
+    });
+    
+    selectedNewTocIndex = -1;
+    renderNewTocList();
+    alert(`${newTocEntries.length}개의 목차 항목을 찾았습니다.`);
+  }
+
+  function moveNewTocItem(dir) {
+    if(selectedNewTocIndex < 0) return;
+    const newIdx = selectedNewTocIndex + dir;
+    if(newIdx < 0 || newIdx >= newTocEntries.length) return;
+    const item = newTocEntries.splice(selectedNewTocIndex, 1)[0];
+    newTocEntries.splice(newIdx, 0, item);
+    selectedNewTocIndex = newIdx;
+    renderNewTocList();
+  }
+
+  function changeNewTocLevel(dir) {
+    if(selectedNewTocIndex < 0) return;
+    const item = newTocEntries[selectedNewTocIndex];
+    const newLevel = (item.level || 1) + dir;
+    if(newLevel < 1 || newLevel > 6) return;
+    item.level = newLevel;
+    renderNewTocList();
+  }
+
+  function editNewTocLabel() {
+    if(selectedNewTocIndex < 0) return;
+    const item = newTocEntries[selectedNewTocIndex];
+    const newLabel = prompt('새 제목:', item.label);
+    if(newLabel !== null && newLabel.trim()) {
+      item.label = newLabel.trim();
+      renderNewTocList();
+    }
+  }
+
+  function deleteNewTocItem() {
+    if(selectedNewTocIndex < 0) return;
+    if(!confirm('선택한 항목을 삭제하시겠습니까?')) return;
+    newTocEntries.splice(selectedNewTocIndex, 1);
+    selectedNewTocIndex = -1;
+    renderNewTocList();
+  }
+
+  function applyNewToc() {
+    if(!newTocEntries.length) {
+      alert('적용할 목차가 없습니다.');
+      return;
+    }
+    if(!tocFilePath || !files[tocFilePath]) {
+      alert('TOC 파일을 찾을 수 없습니다.');
+      return;
+    }
+    
+    tocEntries = newTocEntries.map(e => ({...e}));
+    
+    // Update toc.ncx
+    if(tocFilePath.endsWith('.ncx')) {
+      rebuildNcxXml();
+    } else {
+      rebuildNavHtml();
+    }
+    
+    modifiedFiles.add(tocFilePath);
+    renderTabs();
+    renderFileTree();
+    updateStatus();
+    closeTocModal();
+    alert('목차가 업데이트되었습니다!');
+  }
+
+  function rebuildNcxXml() {
+    const original = files[tocFilePath];
+    const ncxDir = tocFilePath.includes('/') ? tocFilePath.split('/').slice(0,-1).join('/') + '/' : '';
+    
+    // 계층 구조의 navPoint 생성
+    let playOrder = 0;
+    
+    function buildNavPoints(entries, startIdx, parentLevel) {
+      let result = '';
+      let i = startIdx;
+      
+      while(i < entries.length) {
+        const entry = entries[i];
+        const level = entry.level || 1;
+        
+        // 현재 레벨이 부모보다 작거나 같으면 (숫자가 작으면) 상위로 돌아감
+        if(level <= parentLevel) {
+          break;
+        }
+        
+        playOrder++;
+        let relTarget = entry.content;
+        if(relTarget.startsWith(ncxDir)) relTarget = relTarget.slice(ncxDir.length);
+        
+        const baseIndent = '  '.repeat(level);
+        
+        result += `${baseIndent}<navPoint id="navPoint-${playOrder}" playOrder="${playOrder}">\n`;
+        result += `${baseIndent}  <navLabel><text>${escHtml(entry.label)}</text></navLabel>\n`;
+        result += `${baseIndent}  <content src="${escHtml(relTarget)}"/>\n`;
+        
+        // 다음 항목이 하위 레벨인지 확인하여 재귀 처리
+        if(i + 1 < entries.length && (entries[i + 1].level || 1) > level) {
+          const childResult = buildNavPoints(entries, i + 1, level);
+          result += childResult.content;
+          i = childResult.nextIdx - 1;
+        }
+        
+        result += `${baseIndent}</navPoint>\n`;
+        i++;
+      }
+      
+      return { content: result, nextIdx: i };
+    }
+    
+    // 레벨 1부터 시작하여 계층 구조 생성
+    const hierarchyResult = buildNavPoints(tocEntries, 0, 0);
+    const navPoints = hierarchyResult.content;
+    
+    files[tocFilePath] = original.replace(/<navMap[^>]*>[\s\S]*?<\/navMap>/i, `<navMap>\n${navPoints}</navMap>`);
+  }
+
+  function rebuildNavHtml() {
+    const original = files[tocFilePath];
+    const navDir = tocFilePath.includes('/') ? tocFilePath.split('/').slice(0,-1).join('/') + '/' : '';
+    
+    // 중첩된 ol/li 구조 생성
+    function buildNestedOl(entries, startIdx, parentLevel) {
+      let html = '';
+      let i = startIdx;
+      
+      while(i < entries.length) {
+        const entry = entries[i];
+        const level = entry.level || 1;
+        
+        // 현재 레벨이 부모보다 작거나 같으면 상위로 돌아감
+        if(level <= parentLevel) {
+          break;
+        }
+        
+        let relTarget = entry.content;
+        if(relTarget.startsWith(navDir)) relTarget = relTarget.slice(navDir.length);
+        
+        const indent = '      '.repeat(level);
+        html += `${indent}<li>\n`;
+        html += `${indent}  <a href="${escHtml(relTarget)}">${escHtml(entry.label)}</a>\n`;
+        
+        // 다음 항목이 하위 레벨인지 확인
+        if(i + 1 < entries.length && (entries[i + 1].level || 1) > level) {
+          html += `${indent}  <ol>\n`;
+          const childResult = buildNestedOl(entries, i + 1, level);
+          html += childResult.content;
+          html += `${indent}  </ol>\n`;
+          i = childResult.nextIdx - 1;
+        }
+        
+        html += `${indent}</li>\n`;
+        i++;
+      }
+      
+      return { content: html, nextIdx: i };
+    }
+    
+    const result = buildNestedOl(tocEntries, 0, 0);
+    const newOl = `<ol>\n${result.content}    </ol>`;
+    
+    // Find and replace ol
+    const lower = original.toLowerCase();
+    let olStart = lower.indexOf('<ol');
+    if(olStart === -1) return;
+    
+    let depth = 0, olEnd = -1, i = olStart;
+    while(i < original.length) {
+      if(lower.startsWith('<ol', i)) { depth++; i += 3; }
+      else if(lower.startsWith('</ol>', i)) {
+        depth--;
+        if(depth === 0) { olEnd = i + 5; break; }
+        i += 5;
+      }
+      else { i++; }
+    }
+    if(olEnd === -1) return;
+    
+    files[tocFilePath] = original.slice(0, olStart) + newOl + original.slice(olEnd);
+  }
 
   // ─── UTILS ───
   function getExt(path) {
@@ -1262,13 +1779,22 @@
     return (b/(1024*1024)).toFixed(2) + ' MB';
   }
 
+  function formatTimestamp(d) {
+    if(!d) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${String(d.getFullYear()).slice(2)}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function naturalSort(a, b) {
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  }
+
   function updateStatus() {
     statusFile.textContent = activeTab || '—';
     statusType.textContent = activeTab ? (fileTypes[activeTab] || '—').toUpperCase() : '—';
-    statusModified.textContent = modifiedFiles.size ? `${modifiedFiles.size}개 파일 수정됨` : '';
+    statusModified.textContent = modifiedFiles.size ? `${modifiedFiles.size}개 수정됨` : '';
     statusModified.className = modifiedFiles.size ? 'modified' : '';
     
-    // Show timestamp
     if(activeTab && fileTimestamps[activeTab]) {
       statusTimestamp.textContent = formatTimestamp(fileTimestamps[activeTab]);
     } else {
