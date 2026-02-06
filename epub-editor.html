@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor v1.2.0</title>
+<title>EPUB Editor v1.2.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
@@ -1277,14 +1277,22 @@
 
     editorWrap.innerHTML = `
       <div class="img-preview-wrap">
-        <img src="${src}" alt="preview"/>
-        <div class="img-meta">${activeTab} · ${sizeStr} · ${ext.toUpperCase()}</div>
+        <img src="${src}" alt="preview" onload="updateImageDimensions(this)"/>
+        <div class="img-meta" id="imgMeta">${activeTab} · ${sizeStr} · ${ext.toUpperCase()}</div>
         <div class="img-actions">
           <button onclick="replaceImage()">교체</button>
           <button onclick="downloadImage('${src}','${activeTab.split('/').pop()}')">다운로드</button>
         </div>
       </div>
     `;
+  }
+
+  function updateImageDimensions(img) {
+    const meta = document.getElementById('imgMeta');
+    if(meta && img.naturalWidth && img.naturalHeight) {
+      const currentText = meta.textContent;
+      meta.textContent = currentText + ` · ${img.naturalWidth}×${img.naturalHeight}`;
+    }
   }
 
   function replaceImage() {
