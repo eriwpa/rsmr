@@ -2140,8 +2140,12 @@
       if(zip.files[path].dir) zip.files[path].date = mimetimeTime;
     });
     if(zip.files['mimetype']) zip.files['mimetype'].date = mimetimeTime;
+  
+    const blob = await zip.generateAsync({ 
+    type: 'blob',
+    mimeType: 'application/epub+zip'
+    });
     
-    const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
