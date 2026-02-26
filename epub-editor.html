@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor v1.2.0</title>
+<title>EPUB Editor v1.2.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
@@ -65,12 +65,7 @@
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-  .topbar .logo {
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--accent);
-    letter-spacing: 0.5px;
-  }
+  .topbar .logo { font-weight: 600; font-size: 15px; color: var(--accent); letter-spacing: 0.5px; }
   .topbar .spacer { flex:1; }
   .topbar button {
     background: var(--bg3);
@@ -93,218 +88,99 @@
   .topbar button.reset-btn:hover { background: #69a4b7; }
   .topbar button:disabled { opacity: .35; cursor: default; }
   .topbar .fname {
-    font-size: 12px;
-    color: var(--text-dim);
-    max-width: 500px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 12px; color: var(--text-dim);
+    max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .theme-toggle {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 16px;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all .15s;
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    font-size: 16px; width: 32px; height: 32px; border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .15s;
   }
   .theme-toggle:hover { background: var(--bg-hover); border-color: var(--accent); }
 
   /* ─── LAYOUT ─── */
-  .layout {
-    display: flex;
-    height: calc(100dvh - 48px - 28px);
-    overflow: hidden;
-  }
+  .layout { display: flex; height: calc(100dvh - 48px - 28px); overflow: hidden; }
 
   /* ─── SIDEBAR ─── */
   .sidebar {
-    width: 380px;
-    min-width: 380px;
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    width: 380px; min-width: 380px;
+    background: var(--bg2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
   }
   .sidebar-header {
-    padding: 10px 14px;
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    padding: 10px 14px; font-size: 10px; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1.2px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   }
-  .sidebar-header .controls {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    margin-left: auto;
-  }
+  .sidebar-header .controls { display: flex; gap: 4px; align-items: center; margin-left: auto; }
   .sort-btn, .action-btn {
-    cursor: pointer;
-    color: var(--text-dim);
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    transition: all .15s;
-    background: transparent;
-    border: 1px solid transparent;
-    font-family: var(--font-ui);
-    font-weight: 600;
+    cursor: pointer; color: var(--text-dim); font-size: 11px; padding: 3px 8px;
+    border-radius: 4px; transition: all .15s; background: transparent;
+    border: 1px solid transparent; font-family: var(--font-ui); font-weight: 600;
   }
-  .sort-btn:hover, .action-btn:hover { 
-    background: var(--bg3); 
-    border-color: var(--border);
-    color: var(--text);
-  }
-  .sort-btn.active { 
-    background: var(--accent-dim);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
+  .sort-btn:hover, .action-btn:hover { background: var(--bg3); border-color: var(--border); color: var(--text); }
+  .sort-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
   .action-btn.toc-btn { background: #fff3bd; color: #2d3436; border-color: #ffda64; }
   .action-btn.toc-btn:hover { background: #ffeaa7; border-color: #f39c12; }
   .action-btn.search-btn { background: #c2f1d6; color: #2c2c2c; border-color: #83d5a6; }
   .action-btn.search-btn:hover { background: #7ae1a5; border-color: #7ae1a5; }
 
-  .file-tree {
-    flex: 1;
-    overflow-y: auto;
-    padding: 6px 0;
-  }
+  .file-tree { flex: 1; overflow-y: auto; padding: 6px 0; }
   .file-group-label {
-    padding: 8px 14px 4px;
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    cursor: pointer;
+    padding: 8px 14px 4px; font-size: 9px; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
   }
   .file-group-label:hover { color: var(--text); }
   .file-group { margin-bottom: 4px; }
   .file-group.collapsed .file-group-items { display: none; }
   .file-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 14px;
-    font-size: 11px;
-    color: var(--text);
-    cursor: pointer;
-    transition: background .12s;
-    white-space: nowrap;
-    overflow: hidden;
+    display: flex; align-items: center; gap: 8px; padding: 5px 14px;
+    font-size: 11px; color: var(--text); cursor: pointer; transition: background .12s;
+    white-space: nowrap; overflow: hidden;
   }
   .file-item:hover { background: var(--bg-hover); }
-  .file-item.active {
-    background: var(--accent-dim);
-    color: var(--accent);
-  }
-  .file-item .icon {
-    font-size: 13px;
-    width: 16px;
-    text-align: center;
-    flex-shrink: 0;
-  }
-  .file-item .file-name {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-  }
-  .file-item .timestamp {
-    font-size: 9px;
-    color: var(--text-dim);
-    font-family: var(--font-code);
-    flex-shrink: 0;
-  }
+  .file-item.active { background: var(--accent-dim); color: var(--accent); }
+  .file-item .icon { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; }
+  .file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .file-item .timestamp { font-size: 9px; color: var(--text-dim); font-family: var(--font-code); flex-shrink: 0; }
   .file-item.active .timestamp { color: var(--accent); }
   .file-item.modified { color: var(--red); }
   .file-item .spine-num {
-    font-size: 9px;
-    background: var(--accent-dim);
-    color: var(--accent);
-    padding: 1px 4px;
-    border-radius: 3px;
-    margin-right: 4px;
+    font-size: 9px; background: var(--accent-dim); color: var(--accent);
+    padding: 1px 4px; border-radius: 3px; margin-right: 4px;
   }
 
   /* ─── MAIN ─── */
-  .main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-  /* Editor tabs */
   .editor-tabs {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 6px 10px 0;
-    background: var(--bg);
-    flex-shrink: 0;
-    overflow-x: auto;
+    display: flex; align-items: center; gap: 2px; padding: 6px 10px 0;
+    background: var(--bg); flex-shrink: 0; overflow-x: auto;
   }
   .tab {
-    padding: 6px 12px;
-    font-size: 11px;
-    color: var(--text-dim);
-    border-radius: 6px 6px 0 0;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    font-family: var(--font-ui);
-    transition: all .12s;
-    white-space: nowrap;
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    padding: 6px 12px; font-size: 11px; color: var(--text-dim);
+    border-radius: 6px 6px 0 0; cursor: pointer; background: transparent; border: none;
+    font-family: var(--font-ui); transition: all .12s; white-space: nowrap;
+    max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: center; gap: 6px;
   }
   .tab:hover { color: var(--text); background: var(--bg3); }
-  .tab.active {
-    background: var(--bg2);
-    color: var(--text-bright);
-    border: 1px solid var(--border);
-    border-bottom: 1px solid var(--bg2);
-    margin-bottom: -1px;
-  }
+  .tab.active { background: var(--bg2); color: var(--text-bright); border: 1px solid var(--border); border-bottom: 1px solid var(--bg2); margin-bottom: -1px; }
   .tab.modified::before { content: "●"; color: var(--yellow); margin-right: 4px; }
-  .tab .close {
-    opacity: .4;
-    cursor: pointer;
-    font-size: 14px;
-  }
+  .tab .close { opacity: .4; cursor: pointer; font-size: 14px; }
   .tab .close:hover { opacity: 1; color: var(--red); }
 
-  /* Editor area */
-  .editor-wrap {
+  .editor-wrap { flex: 1; display: flex; flex-direction: column; border-top: 1px solid var(--border); overflow: hidden; background: var(--bg2); }
+
+  /* ─── CODE EDITOR WITH OVERLAY ─── */
+  .editor-container {
     flex: 1;
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    border-top: 1px solid var(--border);
-    overflow: hidden;
-    background: var(--bg2);
   }
 
-  /* Code editor */
   .code-editor {
     flex: 1;
     width: 100%;
@@ -319,1160 +195,214 @@
     outline: none;
     overflow: auto;
     tab-size: 2;
+    position: relative;
+    z-index: 2;
   }
   .code-editor::selection { background: rgba(124,106,255,0.25); }
 
-  /* TOC editor special */
-  .toc-editor {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background: var(--bg);
-  }
-  .toc-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    transition: all .12s;
-    cursor: grab;
-    margin-bottom: 4px;
-  }
-  .toc-item:hover { border-color: var(--border); background: var(--bg3); }
-  .toc-item.dragging { opacity: .4; }
-  .toc-item .drag-handle { color: var(--text-dim); font-size: 14px; cursor: grab; }
-  .toc-item input.toc-label {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--text-bright);
-    font-family: var(--font-ui);
-    font-size: 13px;
-    outline: none;
-  }
-  .toc-item input.toc-label:focus { border-bottom: 1px solid var(--accent); }
-  .toc-item .toc-target {
-    font-size: 10px;
-    color: var(--text-dim);
-    font-family: var(--font-code);
-    background: var(--bg2);
-    padding: 2px 8px;
-    border-radius: 4px;
-    max-width: 140px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .toc-item button {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    font-size: 14px;
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-  .toc-item button:hover { background: var(--bg3); color: var(--red); }
-  .toc-actions {
-    display: flex;
-    gap: 8px;
-    padding: 12px 20px;
-    border-top: 1px solid var(--border);
-    background: var(--bg2);
-    flex-shrink: 0;
-  }
-  .toc-actions button {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-ui);
-    font-size: 11px;
-    padding: 5px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  .toc-actions button:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* Image preview */
-  .img-preview-wrap {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg);
-    gap: 16px;
-    padding: 20px;
-    overflow: auto;
-  }
-  .img-preview-wrap img { max-width: 100%; max-height: 60vh; border-radius: 8px; border: 1px solid var(--border); }
-  .img-meta { font-size: 11px; color: var(--text-dim); font-family: var(--font-code); }
-  .img-actions { display: flex; gap: 8px; }
-  .img-actions button {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-ui);
-    font-size: 11px;
-    padding: 5px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  .img-actions button:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* Empty state */
-  .empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    color: var(--text-dim);
-  }
-  .empty-state .big-icon { font-size: 48px; opacity: .3; }
-  .empty-state p { font-size: 13px; }
-
-  /* Status bar */
-  .statusbar {
-    height: 28px;
-    padding: 0 14px;
-    background: var(--bg2);
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    font-size: 10px;
-    color: var(--text-dim);
-    flex-shrink: 0;
-  }
-  .statusbar .modified { color: var(--yellow); }
-
-  /* Drop overlay */
-  .drop-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(14,15,17,.85);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .drop-overlay.show { display: flex; }
-  .drop-overlay .drop-box {
-    border: 2px dashed var(--accent);
-    border-radius: 16px;
-    padding: 60px 80px;
-    text-align: center;
-  }
-  .drop-overlay .drop-box p { font-size: 18px; color: var(--accent); font-weight: 500; }
-  .drop-overlay .drop-box .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
-
-  /* Modal */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.show { display: flex; }
-  .modal {
-    background: var(--bg2);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    width: 90%;
-    max-width: 800px;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
-  }
-  .modal-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .modal-header h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); }
-  .modal-header .close-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: var(--text-dim);
-    cursor: pointer;
-  }
-  .modal-header .close-btn:hover { color: var(--red); }
-  .modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-  }
-  .modal-footer {
-    padding: 16px 20px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-  .modal-footer button {
-    padding: 8px 20px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--bg3);
-    color: var(--text);
-  }
-  .modal-footer button:hover { border-color: var(--accent); }
-  .modal-footer button.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
-  }
-  .modal-footer button.primary:hover { opacity: 0.9; }
-
-  /* Search modal */
-  .search-input-wrap {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-  }
-  .search-input-wrap input {
-    flex: 1;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg);
-    color: var(--text);
-    font-size: 13px;
-    outline: none;
-  }
-  .search-input-wrap input:focus { border-color: var(--accent); }
-  .search-options {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 15px;
-  }
-  .search-options label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  .search-results {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    max-height: 350px;
-    overflow-y: auto;
-    background: var(--bg);
-  }
-  .search-result-item {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    font-size: 12px;
-  }
-  .search-result-item:hover { background: var(--bg-hover); }
-  .search-result-item:last-child { border-bottom: none; }
-  .search-result-item .file-header {
-    color: var(--accent);
-    font-weight: 600;
-    padding: 4px 0;
-  }
-  .search-result-item .line-info { color: var(--text-dim); }
-
-  /* TOC Dialog styles */
-  .toc-section {
-    margin-bottom: 20px;
-  }
-  .toc-section-header {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-bright);
-    margin-bottom: 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .toc-btn-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-  }
-  .toc-btn-row button {
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--bg3);
-    color: var(--text);
-  }
-  .toc-btn-row button:hover { border-color: var(--accent); color: var(--accent); }
-  .toc-btn-row button.success { background: #e8f5e9; color: #2e7d32; border-color: #81c784; }
-  .toc-btn-row button.success:hover { background: #c8e6c9; }
-  .toc-tree {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    max-height: 200px;
-    overflow-y: auto;
-    background: var(--bg);
-    margin-bottom: 15px;
-  }
-  .toc-tree-item {
-    padding: 6px 12px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .toc-tree-item:last-child { border-bottom: none; }
-  .toc-tree-item.level-1 { background: #fff8dc; }
-  .toc-tree-item.level-2 { background: #fffaf0; padding-left: 24px; }
-  .toc-tree-item.level-3 { background: #ffffff; padding-left: 36px; }
-  .new-toc-list {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    max-height: 300px;
-    overflow-y: auto;
-    background: var(--bg);
-  }
-  .new-toc-item {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: grab;
-    transition: background .1s;
-  }
-  .new-toc-item:hover { background: var(--bg-hover); }
-  .new-toc-item.selected { background: var(--accent-dim); }
-  .new-toc-item.dragging { opacity: 0.5; }
-  .new-toc-item:last-child { border-bottom: none; }
-  .new-toc-item .label { flex: 1; }
-  .new-toc-item .target { 
-    font-size: 10px; 
-    color: var(--text-dim); 
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .new-toc-item .level-badge {
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    background: var(--accent-dim);
-    color: var(--accent);
-  }
-  .toc-edit-btns {
-    display: flex;
-    gap: 6px;
-    margin-top: 10px;
-    flex-wrap: wrap;
-  }
-  .toc-edit-btns button {
-    padding: 5px 10px;
-    font-size: 11px;
-  }
-  .toc-edit-btns button.danger { background: #ffe5e5; color: #d32f2f; border-color: #ffcdd2; }
-  .toc-edit-btns button.danger:hover { background: #ffcdd2; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
-
-  /* Mobile */
-  @media (max-width: 768px) {
-    .sidebar { width: 220px; min-width: 220px; }
-    .file-item { padding: 5px 8px; font-size: 10px; }
-    .file-item .timestamp { display: none; }
-  }
-
-  /* ─── TOP BAR ─── */
-  .topbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    height: 48px;
-    padding: 0 16px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .topbar .logo {
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--accent);
-    letter-spacing: 0.5px;
-  }
-  .topbar .spacer { flex:1; }
-  .topbar button {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-ui);
-    font-size: 12px;
-    font-weight: 500;
-    padding: 6px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all .15s;
-  }
-  .topbar button:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text-bright); }
-  .topbar button.primary { background: #ffd9df; border-color: #ffd9df; color: #4c4143; }
-  .topbar button.primary:hover { background: #ff8b9a; }
-  .topbar button.open-btn { background: #c4c1ef; border-color: #c4c1ef; color: white; }
-  .topbar button.open-btn:hover { background: #7c6aff; }
-  .topbar button.reset-btn { background: #b3deeb; border-color: #b3deeb; color: white; }
-  .topbar button.reset-btn:hover { background: #69a4b7; }
-  .topbar button:disabled { opacity: .35; cursor: default; }
-  .topbar .fname {
-    font-size: 12px;
-    color: var(--text-dim);
-    max-width: 500px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .theme-toggle {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 16px;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all .15s;
-  }
-  .theme-toggle:hover { background: var(--bg-hover); border-color: var(--accent); }
-
-  /* ─── LAYOUT ─── */
-  .layout {
-    display: flex;
-    height: calc(100dvh - 48px - 28px);
-    overflow: hidden;
-  }
-
-  /* ─── SIDEBAR ─── */
-  .sidebar {
-    width: 380px;
-    min-width: 380px;
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .sidebar-header {
-    padding: 10px 14px;
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .sidebar-header .controls {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    margin-left: auto;
-  }
-  .sort-btn, .action-btn {
-    cursor: pointer;
-    color: var(--text-dim);
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    transition: all .15s;
-    background: transparent;
-    border: 1px solid transparent;
-    font-family: var(--font-ui);
-    font-weight: 600;
-  }
-  .sort-btn:hover, .action-btn:hover { 
-    background: var(--bg3); 
-    border-color: var(--border);
-    color: var(--text);
-  }
-  .sort-btn.active { 
-    background: var(--accent-dim);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .action-btn.toc-btn { background: #fff3bd; color: #2d3436; border-color: #ffda64; }
-  .action-btn.toc-btn:hover { background: #ffeaa7; border-color: #f39c12; }
-  .action-btn.search-btn { background: #c2f1d6; color: #2c2c2c; border-color: #83d5a6; }
-  .action-btn.search-btn:hover { background: #7ae1a5; border-color: #7ae1a5; }
-
-  .file-tree {
-    flex: 1;
-    overflow-y: auto;
-    padding: 6px 0;
-  }
-  .file-group-label {
-    padding: 8px 14px 4px;
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    cursor: pointer;
-  }
-  .file-group-label:hover { color: var(--text); }
-  .file-group { margin-bottom: 4px; }
-  .file-group.collapsed .file-group-items { display: none; }
-  .file-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 14px;
-    font-size: 11px;
-    color: var(--text);
-    cursor: pointer;
-    transition: background .12s;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-  .file-item:hover { background: var(--bg-hover); }
-  .file-item.active {
-    background: var(--accent-dim);
-    color: var(--accent);
-  }
-  .file-item .icon {
-    font-size: 13px;
-    width: 16px;
-    text-align: center;
-    flex-shrink: 0;
-  }
-  .file-item .file-name {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-  }
-  .file-item .timestamp {
-    font-size: 9px;
-    color: var(--text-dim);
-    font-family: var(--font-code);
-    flex-shrink: 0;
-  }
-  .file-item.active .timestamp { color: var(--accent); }
-  .file-item.modified { color: var(--red); }
-  .file-item .spine-num {
-    font-size: 9px;
-    background: var(--accent-dim);
-    color: var(--accent);
-    padding: 1px 4px;
-    border-radius: 3px;
-    margin-right: 4px;
-  }
-
-  /* ─── MAIN ─── */
-  .main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* Editor tabs */
-  .editor-tabs {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 6px 10px 0;
-    background: var(--bg);
-    flex-shrink: 0;
-    overflow-x: auto;
-  }
-  .tab {
-    padding: 6px 12px;
-    font-size: 11px;
-    color: var(--text-dim);
-    border-radius: 6px 6px 0 0;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    font-family: var(--font-ui);
-    transition: all .12s;
-    white-space: nowrap;
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .tab:hover { color: var(--text); background: var(--bg3); }
-  .tab.active {
-    background: var(--bg2);
-    color: var(--text-bright);
-    border: 1px solid var(--border);
-    border-bottom: 1px solid var(--bg2);
-    margin-bottom: -1px;
-  }
-  .tab.modified::before { content: "●"; color: var(--yellow); margin-right: 4px; }
-  .tab .close {
-    opacity: .4;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .tab .close:hover { opacity: 1; color: var(--red); }
-
-  /* Editor area */
-  .editor-wrap {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    border-top: 1px solid var(--border);
-    overflow: hidden;
-    background: var(--bg2);
-  }
-
-  /* Code editor */
-  .code-editor {
-    flex: 1;
-    width: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-code);
-    font-size: 13px;
-    line-height: 1.7;
-    padding: 16px 20px;
-    resize: none;
-    border: none;
-    outline: none;
-    overflow: auto;
-    tab-size: 2;
-  }
-  .code-editor::selection { background: rgba(124,106,255,0.25); }
-
-  /* TOC editor special */
-  .toc-editor {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background: var(--bg);
-  }
-  .toc-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    transition: all .12s;
-    cursor: grab;
-    margin-bottom: 4px;
-  }
-  .toc-item:hover { border-color: var(--border); background: var(--bg3); }
-  .toc-item.dragging { opacity: .4; }
-  .toc-item .drag-handle { color: var(--text-dim); font-size: 14px; cursor: grab; }
-  .toc-item input.toc-label {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--text-bright);
-    font-family: var(--font-ui);
-    font-size: 13px;
-    outline: none;
-  }
-  .toc-item input.toc-label:focus { border-bottom: 1px solid var(--accent); }
-  .toc-item .toc-target {
-    font-size: 10px;
-    color: var(--text-dim);
-    font-family: var(--font-code);
-    background: var(--bg2);
-    padding: 2px 8px;
-    border-radius: 4px;
-    max-width: 140px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .toc-item button {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    font-size: 14px;
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-  .toc-item button:hover { background: var(--bg3); color: var(--red); }
-  .toc-actions {
-    display: flex;
-    gap: 8px;
-    padding: 12px 20px;
-    border-top: 1px solid var(--border);
-    background: var(--bg2);
-    flex-shrink: 0;
-  }
-  .toc-actions button {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-ui);
-    font-size: 11px;
-    padding: 5px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  .toc-actions button:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* Image preview */
-  .img-preview-wrap {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg);
-    gap: 16px;
-    padding: 20px;
-    overflow: auto;
-  }
-  .img-preview-wrap img { max-width: 100%; max-height: 60vh; border-radius: 8px; border: 1px solid var(--border); }
-  .img-meta { font-size: 11px; color: var(--text-dim); font-family: var(--font-code); }
-  .img-actions { display: flex; gap: 8px; }
-  .img-actions button {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-ui);
-    font-size: 11px;
-    padding: 5px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  .img-actions button:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* Empty state */
-  .empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    color: var(--text-dim);
-  }
-  .empty-state .big-icon { font-size: 48px; opacity: .3; }
-  .empty-state p { font-size: 13px; }
-
-  /* Status bar */
-  .statusbar {
-    height: 28px;
-    padding: 0 14px;
-    background: var(--bg2);
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    font-size: 10px;
-    color: var(--text-dim);
-    flex-shrink: 0;
-  }
-  .statusbar .modified { color: var(--yellow); }
-
-  /* Drop overlay */
-  .drop-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(14,15,17,.85);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .drop-overlay.show { display: flex; }
-  .drop-overlay .drop-box {
-    border: 2px dashed var(--accent);
-    border-radius: 16px;
-    padding: 60px 80px;
-    text-align: center;
-  }
-  .drop-overlay .drop-box p { font-size: 18px; color: var(--accent); font-weight: 500; }
-  .drop-overlay .drop-box .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
-
-  /* Modal */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.show { display: flex; }
-  .modal {
-    background: var(--bg2);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    width: 90%;
-    max-width: 800px;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
-  }
-  .modal-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .modal-header h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); }
-  .modal-header .close-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: var(--text-dim);
-    cursor: pointer;
-  }
-  .modal-header .close-btn:hover { color: var(--red); }
-  .modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-  }
-  .modal-footer {
-    padding: 16px 20px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-  .modal-footer button {
-    padding: 8px 20px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--bg3);
-    color: var(--text);
-  }
-  .modal-footer button:hover { border-color: var(--accent); }
-  .modal-footer button.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
-  }
-  .modal-footer button.primary:hover { opacity: 0.9; }
-
-  /* Search modal */
-  .search-input-wrap {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-  }
-  .search-input-wrap input {
-    flex: 1;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg);
-    color: var(--text);
-    font-size: 13px;
-    outline: none;
-  }
-  .search-input-wrap input:focus { border-color: var(--accent); }
-  .search-options {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 15px;
-  }
-  .search-options label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  .search-results {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    max-height: 350px;
-    overflow-y: auto;
-    background: var(--bg);
-  }
-  .search-result-item {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    font-size: 12px;
-  }
-  .search-result-item:hover { background: var(--bg-hover); }
-  .search-result-item:last-child { border-bottom: none; }
-  .search-result-item .file-header {
-    color: var(--accent);
-    font-weight: 600;
-    padding: 4px 0;
-  }
-  .search-result-item .line-info { color: var(--text-dim); }
-
-  /* TOC Dialog styles */
-  .toc-section {
-    margin-bottom: 20px;
-  }
-  .toc-section-header {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-bright);
-    margin-bottom: 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .toc-btn-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-  }
-  .toc-btn-row button {
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--bg3);
-    color: var(--text);
-  }
-  .toc-btn-row button:hover { border-color: var(--accent); color: var(--accent); }
-  .toc-btn-row button.success { background: #e8f5e9; color: #2e7d32; border-color: #81c784; }
-  .toc-btn-row button.success:hover { background: #c8e6c9; }
-  .toc-tree {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    max-height: 200px;
-    overflow-y: auto;
-    background: var(--bg);
-    margin-bottom: 15px;
-  }
-  .toc-tree-item {
-    padding: 6px 12px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .toc-tree-item:last-child { border-bottom: none; }
-  .toc-tree-item.level-1 { background: #fff8dc; }
-  .toc-tree-item.level-2 { background: #fffaf0; padding-left: 24px; }
-  .toc-tree-item.level-3 { background: #ffffff; padding-left: 36px; }
-  .new-toc-list {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    max-height: 300px;
-    overflow-y: auto;
-    background: var(--bg);
-  }
-  .new-toc-item {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: grab;
-    transition: background .1s;
-  }
-  .new-toc-item:hover { background: var(--bg-hover); }
-  .new-toc-item.selected { background: var(--accent-dim); }
-  .new-toc-item.dragging { opacity: 0.5; }
-  .new-toc-item:last-child { border-bottom: none; }
-  .new-toc-item .label { flex: 1; }
-  .new-toc-item .target { 
-    font-size: 10px; 
-    color: var(--text-dim); 
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .new-toc-item .level-badge {
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    background: var(--accent-dim);
-    color: var(--accent);
-  }
-  .toc-edit-btns {
-    display: flex;
-    gap: 6px;
-    margin-top: 10px;
-    flex-wrap: wrap;
-  }
-  .toc-edit-btns button {
-    padding: 5px 10px;
-    font-size: 11px;
-  }
-  .toc-edit-btns button.danger { background: #ffe5e5; color: #d32f2f; border-color: #ffcdd2; }
-  .toc-edit-btns button.danger:hover { background: #ffcdd2; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
-
-  /* Mobile */
-  @media (max-width: 768px) {
-    .sidebar { width: 220px; min-width: 220px; }
-    .file-item { padding: 5px 8px; font-size: 10px; }
-    .file-item .timestamp { display: none; }
-  }
-
-  /* Find & Replace Panel */
-  .find-replace-panel {
+  /* Invisible char highlight overlay */
+  .invis-overlay {
     position: absolute;
-    top: 10px;
-    right: 20px;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px;
-    min-width: 400px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    display: none;
-  }
-  .find-replace-panel.active {
-    display: block;
-  }
-  .find-replace-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  .find-replace-header h4 {
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    padding: 16px 20px;
+    font-family: var(--font-code);
     font-size: 13px;
-    font-weight: 600;
-    color: var(--text-bright);
+    line-height: 1.7;
+    pointer-events: none;
+    z-index: 3;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: transparent;
+    tab-size: 2;
   }
-  .find-replace-close {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    font-size: 20px;
-    padding: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: all 0.15s;
-  }
-  .find-replace-close:hover {
-    background: var(--bg-hover);
-    color: var(--text-bright);
-  }
-  .find-replace-input-group {
-    margin-bottom: 10px;
-  }
-  .find-replace-input-group label {
-    display: block;
-    margin-bottom: 4px;
-    font-size: 11px;
-    color: var(--text-dim);
-    font-weight: 500;
-  }
-  .find-replace-input {
-    width: 100%;
-    padding: 8px 12px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-size: 13px;
+  .invis-overlay.hidden { display: none; }
+
+  .invis-badge {
+    display: inline;
+    background: #ff4757;
+    color: #fff;
+    font-size: 9px;
     font-family: var(--font-ui);
-    outline: none;
-    transition: all 0.15s;
-  }
-  .find-replace-input:focus {
-    border-color: var(--accent);
-    background: var(--bg2);
-  }
-  .find-replace-options {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
-    font-size: 11px;
-  }
-  .find-replace-option {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: var(--text);
-  }
-  .find-replace-option input[type="checkbox"] {
-    cursor: pointer;
-  }
-  .find-replace-buttons {
-    display: flex;
-    gap: 6px;
-  }
-  .find-replace-btn {
-    flex: 1;
-    padding: 8px 12px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 500;
-    transition: all 0.15s;
-  }
-  .find-replace-btn:hover {
-    opacity: 0.85;
-  }
-  .find-replace-btn-replace {
-    background: var(--green);
-  }
-  .find-replace-btn-replace-all {
-    background: var(--red);
-  }
-  .find-replace-results {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--text-dim);
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 1px 3px;
+    vertical-align: middle;
+    pointer-events: none;
+    line-height: 1;
+    letter-spacing: 0;
   }
 
+  /* TOC editor */
+  .toc-editor { flex: 1; padding: 20px; overflow-y: auto; background: var(--bg); }
+  .toc-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    border-radius: 6px; border: 1px solid transparent; transition: all .12s; cursor: grab; margin-bottom: 4px;
+  }
+  .toc-item:hover { border-color: var(--border); background: var(--bg3); }
+  .toc-item.dragging { opacity: .4; }
+  .toc-item .drag-handle { color: var(--text-dim); font-size: 14px; cursor: grab; }
+  .toc-item input.toc-label {
+    flex: 1; background: transparent; border: none; color: var(--text-bright);
+    font-family: var(--font-ui); font-size: 13px; outline: none;
+  }
+  .toc-item input.toc-label:focus { border-bottom: 1px solid var(--accent); }
+  .toc-item .toc-target {
+    font-size: 10px; color: var(--text-dim); font-family: var(--font-code);
+    background: var(--bg2); padding: 2px 8px; border-radius: 4px;
+    max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .toc-item button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
+  .toc-item button:hover { background: var(--bg3); color: var(--red); }
+  .toc-actions { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
+  .toc-actions button {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-ui); font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
+  }
+  .toc-actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Image preview */
+  .img-preview-wrap {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bg); gap: 16px; padding: 20px; overflow: auto;
+  }
+  .img-preview-wrap img { max-width: 100%; max-height: 60vh; border-radius: 8px; border: 1px solid var(--border); }
+  .img-meta { font-size: 11px; color: var(--text-dim); font-family: var(--font-code); }
+  .img-actions { display: flex; gap: 8px; }
+  .img-actions button {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-ui); font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
+  }
+  .img-actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Empty state */
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--text-dim); }
+  .empty-state .big-icon { font-size: 48px; opacity: .3; }
+  .empty-state p { font-size: 13px; }
+
+  /* Status bar */
+  .statusbar {
+    height: 28px; padding: 0 14px; background: var(--bg2); border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 20px; font-size: 10px; color: var(--text-dim); flex-shrink: 0;
+  }
+  .statusbar .modified { color: var(--yellow); }
+
+  /* Invisible char toggle button */
+  .invis-toggle-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 10px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .invis-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .invis-toggle-btn.active {
+    background: #fff0f0;
+    border-color: #ff4757;
+    color: #ff4757;
+  }
+  .invis-count {
+    font-size: 9px;
+    background: #ff4757;
+    color: white;
+    border-radius: 8px;
+    padding: 0 5px;
+    font-weight: 700;
+  }
+
+  /* Drop overlay */
+  .drop-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(14,15,17,.85);
+    z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+  }
+  .drop-overlay.show { display: flex; }
+  .drop-overlay .drop-box { border: 2px dashed var(--accent); border-radius: 16px; padding: 60px 80px; text-align: center; }
+  .drop-overlay .drop-box p { font-size: 18px; color: var(--accent); font-weight: 500; }
+  .drop-overlay .drop-box .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg2); border-radius: 12px; border: 1px solid var(--border);
+    width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+  }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); }
+  .modal-header .close-btn { background: none; border: none; font-size: 20px; color: var(--text-dim); cursor: pointer; }
+  .modal-header .close-btn:hover { color: var(--red); }
+  .modal-body { flex: 1; overflow-y: auto; padding: 20px; }
+  .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+  .modal-footer button { padding: 8px 20px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text); }
+  .modal-footer button:hover { border-color: var(--accent); }
+  .modal-footer button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .modal-footer button.primary:hover { opacity: 0.9; }
+
+  /* Search modal */
+  .search-input-wrap { display: flex; gap: 10px; margin-bottom: 15px; }
+  .search-input-wrap input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
+  .search-input-wrap input:focus { border-color: var(--accent); }
+  .search-options { display: flex; gap: 16px; margin-bottom: 15px; }
+  .search-options label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+  .search-results { border: 1px solid var(--border); border-radius: 6px; max-height: 350px; overflow-y: auto; background: var(--bg); }
+  .search-result-item { padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12px; }
+  .search-result-item:hover { background: var(--bg-hover); }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item .file-header { color: var(--accent); font-weight: 600; padding: 4px 0; }
+  .search-result-item .line-info { color: var(--text-dim); }
+
+  /* TOC Dialog */
+  .toc-section { margin-bottom: 20px; }
+  .toc-section-header { font-size: 13px; font-weight: 600; color: var(--text-bright); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .toc-btn-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+  .toc-btn-row button { padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text); }
+  .toc-btn-row button:hover { border-color: var(--accent); color: var(--accent); }
+  .toc-btn-row button.success { background: #e8f5e9; color: #2e7d32; border-color: #81c784; }
+  .toc-btn-row button.success:hover { background: #c8e6c9; }
+  .toc-tree { border: 1px solid var(--border); border-radius: 6px; max-height: 200px; overflow-y: auto; background: var(--bg); margin-bottom: 15px; }
+  .toc-tree-item { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  .toc-tree-item:last-child { border-bottom: none; }
+  .toc-tree-item.level-1 { background: #fff8dc; }
+  .toc-tree-item.level-2 { background: #fffaf0; padding-left: 24px; }
+  .toc-tree-item.level-3 { background: #ffffff; padding-left: 36px; }
+  .new-toc-list { border: 1px solid var(--border); border-radius: 6px; max-height: 300px; overflow-y: auto; background: var(--bg); }
+  .new-toc-item {
+    padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px;
+    display: flex; align-items: center; gap: 8px; cursor: grab; transition: background .1s;
+  }
+  .new-toc-item:hover { background: var(--bg-hover); }
+  .new-toc-item.selected { background: var(--accent-dim); }
+  .new-toc-item.dragging { opacity: 0.5; }
+  .new-toc-item:last-child { border-bottom: none; }
+  .new-toc-item .label { flex: 1; }
+  .new-toc-item .target { font-size: 10px; color: var(--text-dim); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .new-toc-item .level-badge { font-size: 9px; padding: 2px 6px; border-radius: 3px; background: var(--accent-dim); color: var(--accent); }
+  .toc-edit-btns { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .toc-edit-btns button { padding: 5px 10px; font-size: 11px; }
+  .toc-edit-btns button.danger { background: #ffe5e5; color: #d32f2f; border-color: #ffcdd2; }
+  .toc-edit-btns button.danger:hover { background: #ffcdd2; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  @media (max-width: 768px) {
+    .sidebar { width: 220px; min-width: 220px; }
+    .file-item { padding: 5px 8px; font-size: 10px; }
+    .file-item .timestamp { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -1522,20 +452,15 @@
       <button class="close-btn" onclick="closeTocModal()">×</button>
     </div>
     <div class="modal-body">
-      <!-- Load buttons -->
       <div class="toc-btn-row">
         <button class="success" onclick="loadOriginalToc()">📚 원본 목차 불러오기</button>
         <button onclick="loadTocFromHtml()">📝 목차 찾기 (h1~h6)</button>
         <button onclick="loadTocFromFile()">📄 html 첫 본문에서 추출</button>
       </div>
-      
-      <!-- Current TOC -->
       <div class="toc-section">
         <div class="toc-section-header">💫 현재 목차 구조</div>
         <div class="toc-tree" id="currentTocTree"></div>
       </div>
-      
-      <!-- New TOC -->
       <div class="toc-section">
         <div class="toc-section-header">✨ 새 목차 (드래그로 순서 변경, 클릭으로 선택)</div>
         <div class="new-toc-list" id="newTocList"></div>
@@ -1570,7 +495,6 @@
 
 <!-- Layout -->
 <div class="layout">
-  <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
       <span>FILE TREE</span>
@@ -1589,11 +513,9 @@
     </div>
   </div>
 
-  <!-- Main -->
   <div class="main">
     <div class="editor-tabs" id="editorTabs"></div>
-    
-  <div class="editor-wrap" id="editorWrap">
+    <div class="editor-wrap" id="editorWrap">
       <div class="empty-state">
         <div class="big-icon">📖</div>
         <p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
@@ -1607,6 +529,9 @@
   <span id="statusFile">—</span>
   <span id="statusType">—</span>
   <span id="statusModified"></span>
+  <button class="invis-toggle-btn" id="invisToggleBtn" onclick="toggleInvisMode()" title="제로폭 문자 표시 토글">
+    👀 ZW <span class="invis-count" id="invisCount" style="display:none">0</span>
+  </button>
   <div style="flex:1"></div>
   <span id="statusTimestamp">—</span>
   <span id="statusSize">—</span>
@@ -1629,6 +554,24 @@
   let spine = [];
   let sortMode = 'type';
   let currentFileName = '';
+  let invisModeOn = false; // 제로폭 문자 표시 여부
+
+  // ─── 제로폭/불가시 문자 정의 ───
+  const INVIS_CHARS = {
+    '\u2060': 'WJ',      // Word Joiner (U+2060)
+    '\u2061': 'FA',      // Function Application (U+2061)
+    '\u2062': 'IT',      // Invisible Times (U+2062)
+    '\u2063': 'IS',      // Invisible Separator (U+2063)
+    '\u2064': 'IP',      // Invisible Plus (U+2064)
+    '\uFEFF': 'BOM',     // BOM / Zero Width No-Break Space
+    '\u200B': 'ZW',      // Zero Width Space
+    '\u200C': 'ZWNJ',    // Zero Width Non-Joiner
+    '\u200D': 'ZWJ',     // Zero Width Joiner
+    '\u00AD': 'SHY',     // Soft Hyphen
+    '\u180E': 'MVS',     // Mongolian Vowel Separator
+    '\u034F': 'CGJ',     // Combining Grapheme Joiner
+  };
+  const INVIS_REGEX = /[\u2060-\u2064\uFEFF\u200B-\u200D\u00AD\u180E\u034F]/g;
 
   // ─── DOM ───
   const dropOverlay = document.getElementById('dropOverlay');
@@ -1657,86 +600,37 @@
   });
 
   // ─── DRAG & DROP ───
-  document.body.addEventListener('dragenter', e => { 
-    e.preventDefault(); 
-    e.stopPropagation();
-    dropOverlay.classList.add('show'); 
-  });
-  
-  document.body.addEventListener('dragleave', e => { 
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.target === dropOverlay || e.target === document.body) {
-      dropOverlay.classList.remove('show'); 
-    }
-  });
-  
-  document.body.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  
+  document.body.addEventListener('dragenter', e => { e.preventDefault(); e.stopPropagation(); dropOverlay.classList.add('show'); });
+  document.body.addEventListener('dragleave', e => { e.preventDefault(); e.stopPropagation(); if(e.target === dropOverlay || e.target === document.body) dropOverlay.classList.remove('show'); });
+  document.body.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
   document.body.addEventListener('drop', async e => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     dropOverlay.classList.remove('show');
-    
-    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = [...e.dataTransfer.files].find(f => f.name.toLowerCase().endsWith('.epub'));
-      if(file) {
-        loadEpub(file);
-      } else {
-        alert('EPUB 파일만 업로드 가능합니다');
-      }
+      if(file) loadEpub(file);
+      else alert('EPUB 파일만 업로드 가능합니다');
     }
   });
 
-  // ─── FILE INPUT ───
   btnOpen.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => {
-    if(fileInput.files[0]) loadEpub(fileInput.files[0]);
-  });
-
-  // ─── RESET ───
+  fileInput.addEventListener('change', () => { if(fileInput.files[0]) loadEpub(fileInput.files[0]); });
   btnReset.addEventListener('click', resetEditor);
 
   function resetEditor() {
-    zip = null;
-    files = {};
-    fileTypes = {};
-    fileTimestamps = {};
-    openTabs = [];
-    activeTab = null;
-    modifiedFiles.clear();
-    tocEntries = [];
-    newTocEntries = [];
-    tocFilePath = null;
-    opfPath = null;
-    spine = [];
-    currentFileName = '';
-    
+    zip = null; files = {}; fileTypes = {}; fileTimestamps = {};
+    openTabs = []; activeTab = null; modifiedFiles.clear();
+    tocEntries = []; newTocEntries = []; tocFilePath = null;
+    opfPath = null; spine = []; currentFileName = '';
     topFname.textContent = '파일 미열림';
-    btnSave.disabled = true;
-    btnReset.disabled = true;
-    btnSearch.disabled = true;
-    btnToc.disabled = true;
-    
-    fileTree.innerHTML = `
-      <div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">
-        EPUB 파일을 열면<br/>내부 구조가 표시됩니다
-      </div>
-    `;
+    btnSave.disabled = true; btnReset.disabled = true; btnSearch.disabled = true; btnToc.disabled = true;
+    fileTree.innerHTML = `<div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">EPUB 파일을 열면<br/>내부 구조가 표시됩니다</div>`;
     editorTabs.innerHTML = '';
-    editorWrap.innerHTML = `
-      <div class="empty-state">
-        <div class="big-icon">📖</div>
-        <p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
-      </div>
-    `;
+    editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p></div>`;
     updateStatus();
   }
 
-  // ─── SORT BUTTONS ───
+  // ─── SORT ───
   document.getElementById('sortSpine').addEventListener('click', () => { sortMode = 'spine'; renderFileTree(); updateSortButtons(); });
   document.getElementById('sortType').addEventListener('click', () => { sortMode = 'type'; renderFileTree(); updateSortButtons(); });
   document.getElementById('sortName').addEventListener('click', () => { sortMode = 'name'; renderFileTree(); updateSortButtons(); });
@@ -1751,17 +645,9 @@
   // ─── LOAD EPUB ───
   async function loadEpub(file) {
     zip = await JSZip.loadAsync(file);
-    files = {};
-    fileTypes = {};
-    fileTimestamps = {};
-    modifiedFiles.clear();
-    openTabs = [];
-    activeTab = null;
-    spine = [];
-    tocEntries = [];
-    tocFilePath = null;
-    opfPath = null;
-    currentFileName = file.name;
+    files = {}; fileTypes = {}; fileTimestamps = {}; modifiedFiles.clear();
+    openTabs = []; activeTab = null; spine = []; tocEntries = [];
+    tocFilePath = null; opfPath = null; currentFileName = file.name;
 
     for(const [path, zipEntry] of Object.entries(zip.files)) {
       if(zipEntry.dir) continue;
@@ -1780,12 +666,8 @@
     parseEpubStructure();
     renderFileTree();
     renderTabs();
-
     topFname.textContent = `${currentFileName} · ${formatBytes(file.size)}`;
-    btnSave.disabled = false;
-    btnReset.disabled = false;
-    btnSearch.disabled = false;
-    btnToc.disabled = false;
+    btnSave.disabled = false; btnReset.disabled = false; btnSearch.disabled = false; btnToc.disabled = false;
   }
 
   function detectFileType(path) {
@@ -1806,47 +688,28 @@
     return 'binary';
   }
 
-  // ─── PARSE EPUB STRUCTURE ───
+  // ─── PARSE EPUB ───
   function parseEpubStructure() {
-    // Find OPF
     const containerPath = 'META-INF/container.xml';
     if(files[containerPath]) {
       const match = files[containerPath].match(/full-path\s*=\s*["']([^"']+)["']/i);
       if(match) opfPath = match[1];
     }
-    if(!opfPath) {
-      for(const p in fileTypes) {
-        if(fileTypes[p] === 'opf') { opfPath = p; break; }
-      }
-    }
-    if(!opfPath) {
-      for(const p in files) {
-        if(p.toLowerCase().endsWith('.opf')) { opfPath = p; fileTypes[p] = 'opf'; break; }
-      }
-    }
-
+    if(!opfPath) { for(const p in fileTypes) { if(fileTypes[p] === 'opf') { opfPath = p; break; } } }
+    if(!opfPath) { for(const p in files) { if(p.toLowerCase().endsWith('.opf')) { opfPath = p; fileTypes[p] = 'opf'; break; } } }
     if(!opfPath || !files[opfPath]) return;
 
     const content = files[opfPath];
     const opfDir = opfPath.includes('/') ? opfPath.split('/').slice(0,-1).join('/') + '/' : '';
-
-    // Parse spine
     const idrefs = [...content.matchAll(/<itemref\s+[^>]*idref\s*=\s*["']([^"']+)["']/gi)].map(m => m[1]);
     const idToHref = {};
-    for(const m of content.matchAll(/<item[^>]+id\s*=\s*["']([^"']+)["'][^>]+href\s*=\s*["']([^"']+)["']/gi)) {
-      idToHref[m[1]] = m[2];
-    }
-    for(const m of content.matchAll(/<item[^>]+href\s*=\s*["']([^"']+)["'][^>]+id\s*=\s*["']([^"']+)["']/gi)) {
-      idToHref[m[2]] = m[1];
-    }
+    for(const m of content.matchAll(/<item[^>]+id\s*=\s*["']([^"']+)["'][^>]+href\s*=\s*["']([^"']+)["']/gi)) idToHref[m[1]] = m[2];
+    for(const m of content.matchAll(/<item[^>]+href\s*=\s*["']([^"']+)["'][^>]+id\s*=\s*["']([^"']+)["']/gi)) idToHref[m[2]] = m[1];
     spine = idrefs.map(id => idToHref[id] ? (opfDir + idToHref[id]).replace('//','/') : null).filter(Boolean);
 
-    // Find TOC
     for(const p in files) {
       if(p.toLowerCase().includes('nav.xhtml') || p.toLowerCase().includes('toc.ncx')) {
-        tocFilePath = p;
-        parseToc(p);
-        break;
+        tocFilePath = p; parseToc(p); break;
       }
     }
   }
@@ -1855,41 +718,11 @@
     const content = files[path];
     tocEntries = [];
     const tocDir = path.includes('/') ? path.split('/').slice(0,-1).join('/') + '/' : '';
-
     if(path.endsWith('.ncx')) {
-      // Parse NCX - handle hierarchy
-      const navPointRegex = /<navPoint[^>]*>([\s\S]*?)<\/navPoint>/gi;
-      const parseNavPoints = (str, level = 1) => {
-        const results = [];
-        let match;
-        const regex = /<navPoint[^>]*>([\s\S]*?)<\/navPoint>/gi;
-        while((match = regex.exec(str)) !== null) {
-          const inner = match[1];
-          const labelMatch = inner.match(/<navLabel>\s*<text>([^<]+)<\/text>\s*<\/navLabel>/i);
-          const srcMatch = inner.match(/<content\s+src="([^"]+)"/i);
-          if(labelMatch && srcMatch) {
-            const entry = {
-              label: labelMatch[1],
-              content: tocDir + srcMatch[1],
-              level: level,
-              children: []
-            };
-            // Find nested navPoints
-            const nestedMatch = inner.match(/<navPoint[\s\S]*<\/navPoint>/gi);
-            if(nestedMatch) {
-              entry.children = parseNavPoints(nestedMatch.join(''), level + 1);
-            }
-            results.push(entry);
-          }
-        }
-        return results;
-      };
-      // Simple flat parsing for now
       for(const m of content.matchAll(/<navLabel>\s*<text>([^<]+)<\/text>\s*<\/navLabel>\s*<content\s+src="([^"]+)"/gi)) {
         tocEntries.push({ label: m[1], content: tocDir + m[2], level: 1 });
       }
     } else {
-      // Parse nav.xhtml
       for(const m of content.matchAll(/<a\s+href="([^"]+)">([^<]+)<\/a>/gi)) {
         tocEntries.push({ label: m[2], content: tocDir + m[1], level: 1 });
       }
@@ -1899,19 +732,13 @@
   // ─── RENDER FILE TREE ───
   function renderFileTree() {
     if(!Object.keys(files).length) return;
-
     const allFiles = Object.keys(files).map(p => ({ path: p, type: fileTypes[p] || 'other' }));
     let html = '';
 
     if(sortMode === 'spine') {
-      // Spine files first
       const spineFiles = spine.filter(p => files[p]);
       const otherFiles = allFiles.filter(f => !spine.includes(f.path)).sort((a,b) => naturalSort(a.path, b.path));
-      
-      spineFiles.forEach((path, idx) => {
-        const f = { path, type: fileTypes[path] };
-        html += renderFileItem(f, idx + 1);
-      });
+      spineFiles.forEach((path, idx) => { html += renderFileItem({ path, type: fileTypes[path] }, idx + 1); });
       if(otherFiles.length) {
         html += `<div class="file-group-label">기타 파일 (${otherFiles.length})</div>`;
         otherFiles.forEach(f => { html += renderFileItem(f); });
@@ -1920,14 +747,10 @@
       allFiles.sort((a,b) => naturalSort(a.path, b.path));
       allFiles.forEach(f => { html += renderFileItem(f); });
     } else {
-      // Group by type
       const groups = {};
       const groupOrder = ['html','css','image','xml','opf','ncx','font','text','binary'];
       const groupNames = { html:'Text', css:'Styles', image:'Images', xml:'XML', opf:'OPF', ncx:'NCX', font:'Fonts', text:'Etc', binary:'Binary' };
-      allFiles.forEach(f => {
-        if(!groups[f.type]) groups[f.type] = [];
-        groups[f.type].push(f);
-      });
+      allFiles.forEach(f => { if(!groups[f.type]) groups[f.type] = []; groups[f.type].push(f); });
       groupOrder.forEach(type => {
         if(!groups[type]) return;
         groups[type].sort((a,b) => naturalSort(a.path, b.path));
@@ -1951,17 +774,13 @@
     const timestamp = ts ? formatTimestamp(ts) : '';
     const isActive = activeTab === f.path;
     const isModified = modifiedFiles.has(f.path);
-    
     let classes = 'file-item';
     if(isActive) classes += ' active';
     if(isModified) classes += ' modified';
-    
     let spineHtml = spineIndex ? `<span class="spine-num">${spineIndex}</span>` : '';
     let modIcon = isModified ? '🔴 ' : '';
-    
     return `<div class="${classes}" data-path="${f.path}">
-      ${spineHtml}
-      <span class="icon">${modIcon}${icon}</span>
+      ${spineHtml}<span class="icon">${modIcon}${icon}</span>
       <span class="file-name">${name}</span>
       <span class="timestamp">${timestamp}</span>
     </div>`;
@@ -1988,21 +807,13 @@
     }).join('');
 
     editorTabs.querySelectorAll('.tab').forEach(el => {
-      el.addEventListener('click', () => {
-        activeTab = el.dataset.path;
-        renderTabs();
-        renderEditor();
-        renderFileTree();
-        updateStatus();
-      });
+      el.addEventListener('click', () => { activeTab = el.dataset.path; renderTabs(); renderEditor(); renderFileTree(); updateStatus(); });
     });
   }
 
   function closeTab(path) {
     openTabs = openTabs.filter(t => t.path !== path);
-    if(activeTab === path) {
-      activeTab = openTabs.length ? openTabs[openTabs.length-1].path : null;
-    }
+    if(activeTab === path) activeTab = openTabs.length ? openTabs[openTabs.length-1].path : null;
     renderTabs();
     if(activeTab) renderEditor();
     else editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>파일을 선택하세요</p></div>`;
@@ -2010,46 +821,132 @@
     updateStatus();
   }
 
-  // ─── OPEN FILE ───
   function openFile(path) {
-    if(!openTabs.find(t => t.path === path)) {
-      openTabs.push({ path });
-    }
+    if(!openTabs.find(t => t.path === path)) openTabs.push({ path });
     activeTab = path;
-    renderTabs();
-    renderEditor();
-    renderFileTree();
-    updateStatus();
+    renderTabs(); renderEditor(); renderFileTree(); updateStatus();
   }
 
   // ─── RENDER EDITOR ───
   function renderEditor() {
     if(!activeTab) return;
     const type = fileTypes[activeTab];
+    if(type === 'image') renderImagePreview();
+    else if(['html','xml','opf','ncx','css','text'].includes(type)) renderTextEditor();
+    else editorWrap.innerHTML = `<div class="empty-state"><p>바이너리 파일은 편집할 수 없습니다</p></div>`;
+  }
 
-    if(type === 'image') {
-      renderImagePreview();
-    } else if(['html','xml','opf','ncx','css','text'].includes(type)) {
-      renderTextEditor();
+  // ─── 제로폭 문자 하이라이트 오버레이 ───
+  function countInvisChars(text) {
+    const matches = text.match(INVIS_REGEX);
+    return matches ? matches.length : 0;
+  }
+
+  function buildOverlayHtml(text) {
+    // text를 HTML 이스케이프 + 제로폭 문자 → 뱃지로 치환
+    // 제로폭 문자는 실제 너비 0이므로 뱃지가 해당 위치에 삽입됨
+    let result = '';
+    for(let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if(INVIS_CHARS[ch]) {
+        const label = INVIS_CHARS[ch];
+        const code = ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0');
+        result += `<span class="invis-badge" title="U+${code} ${label}">${label}</span>`;
+      } else if(ch === '&') {
+        result += '&amp;';
+      } else if(ch === '<') {
+        result += '&lt;';
+      } else if(ch === '>') {
+        result += '&gt;';
+      } else {
+        result += ch;
+      }
+    }
+    return result;
+  }
+
+  function updateOverlay() {
+    const editor = document.getElementById('codeEditor');
+    const overlay = document.getElementById('invisOverlay');
+    if(!editor || !overlay) return;
+
+    if(!invisModeOn) {
+      overlay.classList.add('hidden');
+      updateInvisCount(0, false);
+      return;
+    }
+
+    const content = editor.value;
+    const count = countInvisChars(content);
+    overlay.innerHTML = buildOverlayHtml(content);
+    overlay.classList.remove('hidden');
+
+    // 스크롤 동기화
+    overlay.scrollTop = editor.scrollTop;
+    overlay.scrollLeft = editor.scrollLeft;
+
+    updateInvisCount(count, true);
+  }
+
+  function updateInvisCount(count, show) {
+    const el = document.getElementById('invisCount');
+    if(!el) return;
+    el.textContent = count;
+    el.style.display = (show && count > 0) ? 'inline' : 'none';
+  }
+
+  function toggleInvisMode() {
+    invisModeOn = !invisModeOn;
+    const btn = document.getElementById('invisToggleBtn');
+    btn.classList.toggle('active', invisModeOn);
+
+    const editor = document.getElementById('codeEditor');
+    if(editor) {
+      if(invisModeOn) {
+        // textarea를 반투명하게 (글자는 유지, overlay가 뱃지 표시)
+        editor.style.color = 'transparent';
+        editor.style.caretColor = 'var(--text)'; // 커서는 보이게
+        editor.style.webkitTextFillColor = 'transparent';
+        // 하지만 선택 영역이 안보이면 불편 → 선택색만 남김
+      } else {
+        editor.style.color = '';
+        editor.style.caretColor = '';
+        editor.style.webkitTextFillColor = '';
+      }
+      updateOverlay();
     } else {
-      editorWrap.innerHTML = `<div class="empty-state"><p>바이너리 파일은 편집할 수 없습니다</p></div>`;
+      updateInvisCount(0, false);
     }
   }
 
   function renderTextEditor() {
     const content = files[activeTab] || '';
-    editorWrap.innerHTML = `<textarea class="code-editor" id="codeEditor">${escHtml(content)}</textarea>`;
+    editorWrap.innerHTML = `
+      <div class="editor-container">
+        <textarea class="code-editor" id="codeEditor">${escHtml(content)}</textarea>
+        <div class="invis-overlay hidden" id="invisOverlay" aria-hidden="true"></div>
+      </div>`;
+
     const editor = document.getElementById('codeEditor');
+    const overlay = document.getElementById('invisOverlay');
+
+    // 스크롤 동기화
+    editor.addEventListener('scroll', () => {
+      if(overlay) {
+        overlay.scrollTop = editor.scrollTop;
+        overlay.scrollLeft = editor.scrollLeft;
+      }
+    });
+
     editor.addEventListener('input', () => {
       files[activeTab] = editor.value;
       if(!modifiedFiles.has(activeTab)) {
         modifiedFiles.add(activeTab);
-        renderTabs();
-        renderFileTree();
-        updateStatus();
+        renderTabs(); renderFileTree(); updateStatus();
       }
+      if(invisModeOn) updateOverlay();
     });
-    // Handle tab key
+
     editor.addEventListener('keydown', e => {
       if(e.key === 'Tab') {
         e.preventDefault();
@@ -2057,8 +954,26 @@
         const end = editor.selectionEnd;
         editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
         editor.selectionStart = editor.selectionEnd = start + 2;
+        if(invisModeOn) updateOverlay();
       }
     });
+
+    // 현재 invisModeOn 상태 반영
+    if(invisModeOn) {
+      editor.style.color = 'transparent';
+      editor.style.caretColor = 'var(--text)';
+      editor.style.webkitTextFillColor = 'transparent';
+      updateOverlay();
+    } else {
+      const count = countInvisChars(content);
+      updateInvisCount(count, false);
+      // 비활성 상태여도 갯수는 카운트
+      const btn = document.getElementById('invisToggleBtn');
+      if(count > 0) {
+        const el = document.getElementById('invisCount');
+        if(el) { el.textContent = count; el.style.display = 'inline'; }
+      }
+    }
   }
 
   function renderImagePreview() {
@@ -2067,14 +982,9 @@
     const mimeMap = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', svg:'image/svg+xml', webp:'image/webp' };
     const mime = mimeMap[ext] || 'image/png';
     let src;
-    if(data instanceof Uint8Array) {
-      const blob = new Blob([data], {type: mime});
-      src = URL.createObjectURL(blob);
-    } else {
-      src = 'data:' + mime + ';base64,' + btoa(data);
-    }
+    if(data instanceof Uint8Array) { const blob = new Blob([data], {type: mime}); src = URL.createObjectURL(blob); }
+    else { src = 'data:' + mime + ';base64,' + btoa(data); }
     const sizeStr = data instanceof Uint8Array ? formatBytes(data.byteLength) : formatBytes(data.length);
-  
     editorWrap.innerHTML = `
       <div class="img-preview-wrap">
         <img src="${src}" alt="preview" onload="updateImageDimensions(this)"/>
@@ -2083,133 +993,78 @@
           <button onclick="replaceImage()">교체</button>
           <button onclick="downloadImage('${src}','${activeTab.split('/').pop()}')">다운로드</button>
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
   function updateImageDimensions(img) {
     const meta = document.getElementById('imgMeta');
-    if(meta && img.naturalWidth && img.naturalHeight) {
-      const currentText = meta.textContent;
-      meta.textContent = currentText + ` · ${img.naturalWidth}×${img.naturalHeight}`;
-    }
+    if(meta && img.naturalWidth && img.naturalHeight) meta.textContent += ` · ${img.naturalWidth}×${img.naturalHeight}`;
   }
+
   function replaceImage() {
     const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
+    input.type = 'file'; input.accept = 'image/*';
     input.onchange = async () => {
       const file = input.files[0];
       if(!file) return;
       const arrayBuffer = await file.arrayBuffer();
       files[activeTab] = new Uint8Array(arrayBuffer);
       modifiedFiles.add(activeTab);
-      renderEditor();
-      renderTabs();
-      renderFileTree();
-      updateStatus();
+      renderEditor(); renderTabs(); renderFileTree(); updateStatus();
     };
     input.click();
   }
 
   function downloadImage(src, fname) {
-    const a = document.createElement('a');
-    a.href = src;
-    a.download = fname;
-    a.click();
+    const a = document.createElement('a'); a.href = src; a.download = fname; a.click();
   }
 
   // ─── SAVE ───
   btnSave.addEventListener('click', async () => {
     if(!zip) return;
-    
     const mimetimeTime = (zip.files['mimetype'] && zip.files['mimetype'].date) ? zip.files['mimetype'].date : new Date();
-    
     for(const path in files) {
-      const data = files[path];
       const options = {};
-      if(fileTimestamps[path] && !modifiedFiles.has(path)) {
-        options.date = fileTimestamps[path];
-      } else {
-        options.date = new Date();
-      }
-      zip.file(path, data, options);
+      options.date = (!modifiedFiles.has(path) && fileTimestamps[path]) ? fileTimestamps[path] : new Date();
+      zip.file(path, files[path], options);
     }
-    
-    Object.keys(zip.files).forEach(path => {
-      if(zip.files[path].dir) zip.files[path].date = mimetimeTime;
-    });
+    Object.keys(zip.files).forEach(path => { if(zip.files[path].dir) zip.files[path].date = mimetimeTime; });
     if(zip.files['mimetype']) zip.files['mimetype'].date = mimetimeTime;
-  
-    const blob = await zip.generateAsync({ 
-    type: 'blob',
-    mimeType: 'application/epub+zip'
-    });
-    
+    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = currentFileName;
-    a.click();
+    const a = document.createElement('a'); a.href = url; a.download = currentFileName; a.click();
     URL.revokeObjectURL(url);
-    
     modifiedFiles.forEach(path => { fileTimestamps[path] = new Date(); });
     modifiedFiles.clear();
-    renderTabs();
-    renderFileTree();
-    updateStatus();
+    renderTabs(); renderFileTree(); updateStatus();
   });
 
   // ─── SEARCH ───
-  function openSearchModal() {
-    document.getElementById('searchModal').classList.add('show');
-    document.getElementById('searchInput').focus();
-  }
-
-  function closeSearchModal() {
-    document.getElementById('searchModal').classList.remove('show');
-    // 화면 새로고침
-    renderFileTree();
-    renderTabs();
-    updateStatus();
-  }
+  function openSearchModal() { document.getElementById('searchModal').classList.add('show'); document.getElementById('searchInput').focus(); }
+  function closeSearchModal() { document.getElementById('searchModal').classList.remove('show'); renderFileTree(); renderTabs(); updateStatus(); }
 
   function performSearch() {
     const query = document.getElementById('searchInput').value.trim();
     if(!query) return;
-    
     const caseSensitive = document.getElementById('caseSensitive').checked;
     const htmlOnly = document.getElementById('htmlOnly').checked;
-    
     const results = [];
     for(const [path, content] of Object.entries(files)) {
       if(typeof content !== 'string') continue;
       if(htmlOnly && !path.toLowerCase().match(/\.(html|xhtml)$/)) continue;
-      
       const lines = content.split('\n');
       lines.forEach((line, idx) => {
-        const searchLine = caseSensitive ? line : line.toLowerCase();
-        const searchQuery = caseSensitive ? query : query.toLowerCase();
-        if(searchLine.includes(searchQuery)) {
-          results.push({ path, lineNum: idx + 1, text: line.trim().substring(0, 100) });
-        }
+        const sl = caseSensitive ? line : line.toLowerCase();
+        const sq = caseSensitive ? query : query.toLowerCase();
+        if(sl.includes(sq)) results.push({ path, lineNum: idx + 1, text: line.trim().substring(0, 100) });
       });
     }
-    
     document.getElementById('searchResultCount').textContent = `검색 결과: ${results.length}개`;
-    
-    let html = '';
-    let currentFile = '';
+    let html = ''; let currentFile = '';
     results.forEach(r => {
-      if(r.path !== currentFile) {
-        currentFile = r.path;
-        html += `<div class="search-result-item"><div class="file-header">📄 ${r.path}</div></div>`;
-      }
-      html += `<div class="search-result-item" onclick="openFileAtLine('${r.path.replace(/'/g,"\\'")}', ${r.lineNum})">
-        <span class="line-info">Line ${r.lineNum}:</span> ${escHtml(r.text)}
-      </div>`;
+      if(r.path !== currentFile) { currentFile = r.path; html += `<div class="search-result-item"><div class="file-header">📄 ${r.path}</div></div>`; }
+      html += `<div class="search-result-item" onclick="openFileAtLine('${r.path.replace(/'/g,"\\'")}', ${r.lineNum})"><span class="line-info">Line ${r.lineNum}:</span> ${escHtml(r.text)}</div>`;
     });
-    
     document.getElementById('searchResults').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text-dim);">검색 결과가 없습니다</div>';
   }
 
@@ -2221,52 +1076,34 @@
       if(editor) {
         const lines = editor.value.split('\n');
         let pos = 0;
-        for(let i = 0; i < lineNum - 1 && i < lines.length; i++) {
-          pos += lines[i].length + 1;
-        }
+        for(let i = 0; i < lineNum - 1 && i < lines.length; i++) pos += lines[i].length + 1;
         editor.focus();
         editor.setSelectionRange(pos, pos + lines[lineNum-1].length);
-        // Scroll to position
-        const lineHeight = 22;
-        editor.scrollTop = (lineNum - 5) * lineHeight;
+        editor.scrollTop = (lineNum - 5) * 22;
       }
     }, 100);
   }
 
-  // Keyboard shortcut
   document.addEventListener('keydown', e => {
-    if((e.ctrlKey || e.metaKey) && e.key === 'f' && Object.keys(files).length) {
-      e.preventDefault();
-      openSearchModal();
-    }
+    if((e.ctrlKey || e.metaKey) && e.key === 'f' && Object.keys(files).length) { e.preventDefault(); openSearchModal(); }
   });
 
-  // ─── TOC DIALOG ───
+  // ─── TOC ───
   function openTocModal() {
-    newTocEntries = [];
-    selectedNewTocIndex = -1;
-    renderCurrentToc();
-    renderNewTocList();
+    newTocEntries = []; selectedNewTocIndex = -1;
+    renderCurrentToc(); renderNewTocList();
     document.getElementById('tocModal').classList.add('show');
   }
-
-  function closeTocModal() {
-    document.getElementById('tocModal').classList.remove('show');
-  }
+  function closeTocModal() { document.getElementById('tocModal').classList.remove('show'); }
 
   function renderCurrentToc() {
     const container = document.getElementById('currentTocTree');
-    if(!tocEntries.length) {
-      container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);">목차가 없습니다</div>';
-      return;
-    }
-    
+    if(!tocEntries.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);">목차가 없습니다</div>'; return; }
     const levelIcons = ['📕','📙','📒','📗','📘','📓'];
     container.innerHTML = tocEntries.map(e => {
       const level = e.level || 1;
-      const icon = levelIcons[Math.min(level-1, 5)];
       return `<div class="toc-tree-item level-${level}">
-        <span>${icon}</span>
+        <span>${levelIcons[Math.min(level-1,5)]}</span>
         <span style="flex:1">${escHtml(e.label)}</span>
         <span style="font-size:10px;color:var(--text-dim)">${e.content.split('/').pop()}</span>
       </div>`;
@@ -2275,127 +1112,79 @@
 
   function renderNewTocList() {
     const container = document.getElementById('newTocList');
-    if(!newTocEntries.length) {
-      container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);">목차를 불러오세요</div>';
-      return;
-    }
-    
+    if(!newTocEntries.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);">목차를 불러오세요</div>'; return; }
     const levelIcons = ['📕','📙','📒','📗','📘','📓'];
     container.innerHTML = newTocEntries.map((e, idx) => {
       const level = e.level || 1;
-      const icon = levelIcons[Math.min(level-1, 5)];
       const indent = '  '.repeat(level - 1);
       const selected = idx === selectedNewTocIndex ? ' selected' : '';
       return `<div class="new-toc-item${selected}" data-idx="${idx}" draggable="true">
-        <span>${indent}${icon}</span>
+        <span>${indent}${levelIcons[Math.min(level-1,5)]}</span>
         <span class="label">${escHtml(e.label)}</span>
         <span class="target">${e.content.split('/').pop()}</span>
         <span class="level-badge">Lv${level}</span>
       </div>`;
     }).join('');
-    
-    // Add event listeners
+
     container.querySelectorAll('.new-toc-item').forEach(el => {
-      el.addEventListener('click', () => {
-        selectedNewTocIndex = parseInt(el.dataset.idx);
-        renderNewTocList();
-      });
-      el.addEventListener('dragstart', e => {
-        el.classList.add('dragging');
-        e.dataTransfer.setData('text/plain', el.dataset.idx);
-      });
+      el.addEventListener('click', () => { selectedNewTocIndex = parseInt(el.dataset.idx); renderNewTocList(); });
+      el.addEventListener('dragstart', e => { el.classList.add('dragging'); e.dataTransfer.setData('text/plain', el.dataset.idx); });
       el.addEventListener('dragend', () => el.classList.remove('dragging'));
       el.addEventListener('dragover', e => e.preventDefault());
       el.addEventListener('drop', e => {
         e.preventDefault();
         const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
         const toIdx = parseInt(el.dataset.idx);
-        if(fromIdx !== toIdx) {
-          const item = newTocEntries.splice(fromIdx, 1)[0];
-          newTocEntries.splice(toIdx, 0, item);
-          selectedNewTocIndex = toIdx;
-          renderNewTocList();
-        }
+        if(fromIdx !== toIdx) { const item = newTocEntries.splice(fromIdx, 1)[0]; newTocEntries.splice(toIdx, 0, item); selectedNewTocIndex = toIdx; renderNewTocList(); }
       });
     });
   }
 
   function loadOriginalToc() {
-    if(!tocEntries.length) {
-      alert('원본 목차가 없습니다.');
-      return;
-    }
-    newTocEntries = tocEntries.map(e => ({...e}));
-    selectedNewTocIndex = -1;
-    renderNewTocList();
+    if(!tocEntries.length) { alert('원본 목차가 없습니다.'); return; }
+    newTocEntries = tocEntries.map(e => ({...e})); selectedNewTocIndex = -1; renderNewTocList();
     alert(`${newTocEntries.length}개의 목차 항목을 불러왔습니다.`);
   }
 
   function loadTocFromHtml() {
-    if(!spine.length) {
-      alert('spine 정보가 없습니다.');
-      return;
-    }
-    
+    if(!spine.length) { alert('spine 정보가 없습니다.'); return; }
     newTocEntries = [];
     spine.forEach(filePath => {
       if(!files[filePath] || typeof files[filePath] !== 'string') return;
       const content = files[filePath];
-      
-      // Find h1~h6 tags
       const headingRegex = /<(h[1-6])[^>]*>(.*?)<\/\1>/gi;
       let match;
       while((match = headingRegex.exec(content)) !== null) {
         const level = parseInt(match[1][1]);
         const text = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-        if(text) {
-          newTocEntries.push({ label: text, content: filePath, level });
-        }
+        if(text) newTocEntries.push({ label: text, content: filePath, level });
       }
-      
-      // Find class="title", "toc", "chapter"
       const classRegex = /<(\w+)\s+[^>]*class=["'][^"']*?(title|toc|chapter)[^"']*?["'][^>]*>(.*?)<\/\1>/gi;
       while((match = classRegex.exec(content)) !== null) {
         const text = match[3].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-        if(text && !newTocEntries.find(e => e.label === text && e.content === filePath)) {
-          newTocEntries.push({ label: text, content: filePath, level: 1 });
-        }
+        if(text && !newTocEntries.find(e => e.label === text && e.content === filePath)) newTocEntries.push({ label: text, content: filePath, level: 1 });
       }
     });
-    
-    selectedNewTocIndex = -1;
-    renderNewTocList();
+    selectedNewTocIndex = -1; renderNewTocList();
     alert(`${newTocEntries.length}개의 목차 항목을 찾았습니다.`);
   }
 
   function loadTocFromFile() {
-    if(!spine.length) {
-      alert('spine 정보가 없습니다.');
-      return;
-    }
-    
+    if(!spine.length) { alert('spine 정보가 없습니다.'); return; }
     newTocEntries = [];
     spine.forEach(filePath => {
       if(!files[filePath] || typeof files[filePath] !== 'string') return;
       const content = files[filePath];
-      
-      // Find body content
       const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
       if(bodyMatch) {
-        const bodyContent = bodyMatch[1];
-        // Find first meaningful text
-        const tagMatch = bodyContent.match(/<(\w+)[^>]*>([\s\S]*?)<\/\1>/);
+        const tagMatch = bodyMatch[1].match(/<(\w+)[^>]*>([\s\S]*?)<\/\1>/);
         if(tagMatch) {
           const text = tagMatch[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-          if(text.length >= 1) {
-            newTocEntries.push({ label: text.substring(0, 100), content: filePath, level: 1 });
-          }
+          if(text.length >= 1) newTocEntries.push({ label: text.substring(0, 100), content: filePath, level: 1 });
         }
       }
     });
-    
-    selectedNewTocIndex = -1;
-    renderNewTocList();
+    selectedNewTocIndex = -1; renderNewTocList();
     alert(`${newTocEntries.length}개의 목차 항목을 찾았습니다.`);
   }
 
@@ -2404,9 +1193,7 @@
     const newIdx = selectedNewTocIndex + dir;
     if(newIdx < 0 || newIdx >= newTocEntries.length) return;
     const item = newTocEntries.splice(selectedNewTocIndex, 1)[0];
-    newTocEntries.splice(newIdx, 0, item);
-    selectedNewTocIndex = newIdx;
-    renderNewTocList();
+    newTocEntries.splice(newIdx, 0, item); selectedNewTocIndex = newIdx; renderNewTocList();
   }
 
   function changeNewTocLevel(dir) {
@@ -2414,303 +1201,155 @@
     const item = newTocEntries[selectedNewTocIndex];
     const newLevel = (item.level || 1) + dir;
     if(newLevel < 1 || newLevel > 6) return;
-    item.level = newLevel;
-    renderNewTocList();
+    item.level = newLevel; renderNewTocList();
   }
 
   function editNewTocLabel() {
     if(selectedNewTocIndex < 0) return;
     const item = newTocEntries[selectedNewTocIndex];
     const newLabel = prompt('새 제목:', item.label);
-    if(newLabel !== null && newLabel.trim()) {
-      item.label = newLabel.trim();
-      renderNewTocList();
-    }
+    if(newLabel !== null && newLabel.trim()) { item.label = newLabel.trim(); renderNewTocList(); }
   }
 
   function deleteNewTocItem() {
     if(selectedNewTocIndex < 0) return;
     if(!confirm('선택한 항목을 삭제하시겠습니까?')) return;
-    newTocEntries.splice(selectedNewTocIndex, 1);
-    selectedNewTocIndex = -1;
-    renderNewTocList();
+    newTocEntries.splice(selectedNewTocIndex, 1); selectedNewTocIndex = -1; renderNewTocList();
   }
 
   function applyNewToc() {
-    if(!newTocEntries.length) {
-      alert('적용할 목차가 없습니다.');
-      return;
-    }
-    if(!tocFilePath || !files[tocFilePath]) {
-      alert('TOC 파일을 찾을 수 없습니다.');
-      return;
-    }
-    
+    if(!newTocEntries.length) { alert('적용할 목차가 없습니다.'); return; }
+    if(!tocFilePath || !files[tocFilePath]) { alert('TOC 파일을 찾을 수 없습니다.'); return; }
     tocEntries = newTocEntries.map(e => ({...e}));
-    
-    // Update toc.ncx
-    if(tocFilePath.endsWith('.ncx')) {
-      rebuildNcxXml();
-    } else {
-      rebuildNavHtml();
-    }
-    
+    if(tocFilePath.endsWith('.ncx')) rebuildNcxXml();
+    else rebuildNavHtml();
     modifiedFiles.add(tocFilePath);
-    renderTabs();
-    renderFileTree();
-    updateStatus();
-    closeTocModal();
+    renderTabs(); renderFileTree(); updateStatus(); closeTocModal();
     alert('목차가 업데이트되었습니다!');
   }
 
   function rebuildNcxXml() {
     const original = files[tocFilePath];
     const ncxDir = tocFilePath.includes('/') ? tocFilePath.split('/').slice(0,-1).join('/') + '/' : '';
-    
-    // 계층 구조의 navPoint 생성
     let playOrder = 0;
-    
     function buildNavPoints(entries, startIdx, parentLevel) {
-      let result = '';
-      let i = startIdx;
-      
+      let result = ''; let i = startIdx;
       while(i < entries.length) {
         const entry = entries[i];
         const level = entry.level || 1;
-        
-        // 현재 레벨이 부모보다 작거나 같으면 (숫자가 작으면) 상위로 돌아감
-        if(level <= parentLevel) {
-          break;
-        }
-        
+        if(level <= parentLevel) break;
         playOrder++;
         let relTarget = entry.content;
         if(relTarget.startsWith(ncxDir)) relTarget = relTarget.slice(ncxDir.length);
-        
         const baseIndent = '  '.repeat(level);
-        
         result += `${baseIndent}<navPoint id="navPoint-${playOrder}" playOrder="${playOrder}">\n`;
         result += `${baseIndent}  <navLabel><text>${escHtml(entry.label)}</text></navLabel>\n`;
         result += `${baseIndent}  <content src="${escHtml(relTarget)}"/>\n`;
-        
-        // 다음 항목이 하위 레벨인지 확인하여 재귀 처리
-        if(i + 1 < entries.length && (entries[i + 1].level || 1) > level) {
-          const childResult = buildNavPoints(entries, i + 1, level);
-          result += childResult.content;
-          i = childResult.nextIdx - 1;
+        if(i + 1 < entries.length && (entries[i+1].level || 1) > level) {
+          const childResult = buildNavPoints(entries, i+1, level);
+          result += childResult.content; i = childResult.nextIdx - 1;
         }
-        
-        result += `${baseIndent}</navPoint>\n`;
-        i++;
+        result += `${baseIndent}</navPoint>\n`; i++;
       }
-      
       return { content: result, nextIdx: i };
     }
-    
-    // 레벨 1부터 시작하여 계층 구조 생성
     const hierarchyResult = buildNavPoints(tocEntries, 0, 0);
-    const navPoints = hierarchyResult.content;
-    
-    files[tocFilePath] = original.replace(/<navMap[^>]*>[\s\S]*?<\/navMap>/i, `<navMap>\n${navPoints}</navMap>`);
+    files[tocFilePath] = original.replace(/<navMap[^>]*>[\s\S]*?<\/navMap>/i, `<navMap>\n${hierarchyResult.content}</navMap>`);
   }
 
   function rebuildNavHtml() {
     const original = files[tocFilePath];
     const navDir = tocFilePath.includes('/') ? tocFilePath.split('/').slice(0,-1).join('/') + '/' : '';
-    
-    // 중첩된 ol/li 구조 생성
     function buildNestedOl(entries, startIdx, parentLevel) {
-      let html = '';
-      let i = startIdx;
-      
+      let html = ''; let i = startIdx;
       while(i < entries.length) {
         const entry = entries[i];
         const level = entry.level || 1;
-        
-        // 현재 레벨이 부모보다 작거나 같으면 상위로 돌아감
-        if(level <= parentLevel) {
-          break;
-        }
-        
+        if(level <= parentLevel) break;
         let relTarget = entry.content;
         if(relTarget.startsWith(navDir)) relTarget = relTarget.slice(navDir.length);
-        
         const indent = '      '.repeat(level);
-        html += `${indent}<li>\n`;
-        html += `${indent}  <a href="${escHtml(relTarget)}">${escHtml(entry.label)}</a>\n`;
-        
-        // 다음 항목이 하위 레벨인지 확인
-        if(i + 1 < entries.length && (entries[i + 1].level || 1) > level) {
+        html += `${indent}<li>\n${indent}  <a href="${escHtml(relTarget)}">${escHtml(entry.label)}</a>\n`;
+        if(i + 1 < entries.length && (entries[i+1].level || 1) > level) {
           html += `${indent}  <ol>\n`;
-          const childResult = buildNestedOl(entries, i + 1, level);
-          html += childResult.content;
-          html += `${indent}  </ol>\n`;
+          const childResult = buildNestedOl(entries, i+1, level);
+          html += childResult.content + `${indent}  </ol>\n`;
           i = childResult.nextIdx - 1;
         }
-        
-        html += `${indent}</li>\n`;
-        i++;
+        html += `${indent}</li>\n`; i++;
       }
-      
       return { content: html, nextIdx: i };
     }
-    
     const result = buildNestedOl(tocEntries, 0, 0);
     const newOl = `<ol>\n${result.content}    </ol>`;
-    
-    // Find and replace ol
     const lower = original.toLowerCase();
     let olStart = lower.indexOf('<ol');
     if(olStart === -1) return;
-    
     let depth = 0, olEnd = -1, i = olStart;
     while(i < original.length) {
       if(lower.startsWith('<ol', i)) { depth++; i += 3; }
-      else if(lower.startsWith('</ol>', i)) {
-        depth--;
-        if(depth === 0) { olEnd = i + 5; break; }
-        i += 5;
-      }
+      else if(lower.startsWith('</ol>', i)) { depth--; if(depth === 0) { olEnd = i + 5; break; } i += 5; }
       else { i++; }
     }
     if(olEnd === -1) return;
-    
     files[tocFilePath] = original.slice(0, olStart) + newOl + original.slice(olEnd);
   }
 
+  // ─── REPLACE ALL ───
+  function replaceAllInFiles() {
+    const searchText = document.getElementById('searchInput').value;
+    const replaceText = document.getElementById('replaceInput').value;
+    if(!searchText) { alert('찾을 텍스트를 입력하세요'); return; }
+    const caseSensitive = document.getElementById('caseSensitive').checked;
+    const htmlOnly = document.getElementById('htmlOnly').checked;
+    if(!confirm(`"${searchText}"를 "${replaceText}"로 모두 바꾸시겠습니까?`)) return;
+
+    let totalCount = 0, fileCount = 0;
+    Object.keys(files).forEach(path => {
+      if(htmlOnly && !['.html','.xhtml','.htm'].some(ext => path.toLowerCase().endsWith(ext))) return;
+      let content = files[path]; let count = 0;
+      if(caseSensitive) {
+        const parts = content.split(searchText); count = parts.length - 1;
+        if(count > 0) files[path] = parts.join(replaceText);
+      } else {
+        const escapedText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedText, 'gi');
+        const newContent = content.replace(regex, () => { count++; return replaceText; });
+        if(count > 0) files[path] = newContent;
+      }
+      if(count > 0) { totalCount += count; fileCount++; modifiedFiles.add(path); }
+    });
+
+    if(totalCount > 0) {
+      alert(`${fileCount}개 파일에서 ${totalCount}개 항목을 바꿨습니다`);
+      if(activeTab && files[activeTab]) {
+        const textarea = document.getElementById('codeEditor');
+        if(textarea) { textarea.value = files[activeTab]; if(invisModeOn) updateOverlay(); }
+      }
+      renderFileTree(); renderTabs(); updateStatus(); performSearch();
+    } else {
+      alert(`"${searchText}"를 찾을 수 없습니다`);
+    }
+  }
+
   // ─── UTILS ───
-  function getExt(path) {
-    const parts = path.split('.');
-    return parts.length > 1 ? parts[parts.length-1] : '';
-  }
-
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function formatBytes(b) {
-    if(b < 1024) return b + ' B';
-    if(b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
-    return (b/(1024*1024)).toFixed(2) + ' MB';
-  }
-
-  function formatTimestamp(d) {
-    if(!d) return '';
-    const pad = n => String(n).padStart(2, '0');
-    return `${String(d.getFullYear()).slice(2)}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  function naturalSort(a, b) {
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-  }
+  function getExt(path) { const parts = path.split('.'); return parts.length > 1 ? parts[parts.length-1] : ''; }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function formatBytes(b) { if(b < 1024) return b + ' B'; if(b < 1024*1024) return (b/1024).toFixed(1) + ' KB'; return (b/(1024*1024)).toFixed(2) + ' MB'; }
+  function formatTimestamp(d) { if(!d) return ''; const pad = n => String(n).padStart(2,'0'); return `${String(d.getFullYear()).slice(2)}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+  function naturalSort(a, b) { return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }); }
 
   function updateStatus() {
     statusFile.textContent = activeTab || '—';
     statusType.textContent = activeTab ? (fileTypes[activeTab] || '—').toUpperCase() : '—';
     statusModified.textContent = modifiedFiles.size ? `${modifiedFiles.size}개 수정됨` : '';
     statusModified.className = modifiedFiles.size ? 'modified' : '';
-    
-    if(activeTab && fileTimestamps[activeTab]) {
-      statusTimestamp.textContent = formatTimestamp(fileTimestamps[activeTab]);
-    } else {
-      statusTimestamp.textContent = '—';
-    }
-    
+    statusTimestamp.textContent = (activeTab && fileTimestamps[activeTab]) ? formatTimestamp(fileTimestamps[activeTab]) : '—';
     if(activeTab && files[activeTab]) {
       const d = files[activeTab];
       statusSize.textContent = formatBytes(d instanceof Uint8Array ? d.byteLength : new Blob([d]).size);
-    } else {
-      statusSize.textContent = '—';
-    }
+    } else { statusSize.textContent = '—'; }
   }
-
-  // ─── Replace All in Files ───
-  function replaceAllInFiles() {
-    const searchText = document.getElementById('searchInput').value;
-    const replaceText = document.getElementById('replaceInput').value;
-    
-    if (!searchText) {
-      alert('찾을 텍스트를 입력하세요');
-      return;
-    }
-    
-    const caseSensitive = document.getElementById('caseSensitive').checked;
-    const htmlOnly = document.getElementById('htmlOnly').checked;
-    
-    if (!confirm(`"${searchText}"를 "${replaceText}"로 모두 바꾸시겠습니까?`)) {
-      return;
-    }
-    
-    let totalCount = 0;
-    let fileCount = 0;
-    
-    Object.keys(files).forEach(path => {
-      if (htmlOnly && !['.html', '.xhtml', '.htm'].some(ext => path.toLowerCase().endsWith(ext))) {
-        return;
-      }
-      
-      let content = files[path];
-      let count = 0;
-      
-      if (caseSensitive) {
-        const parts = content.split(searchText);
-        count = parts.length - 1;
-        if (count > 0) {
-          files[path] = parts.join(replaceText);
-        }
-      } else {
-        const escapedText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedText, 'gi');
-        const newContent = content.replace(regex, () => {
-          count++;
-          return replaceText;
-        });
-        if (count > 0) {
-          files[path] = newContent;
-        }
-      }
-      
-      if (count > 0) {
-        totalCount += count;
-        fileCount++;
-        
-        // modifiedFiles에 추가
-        modifiedFiles.add(path);
-      }
-    });
-    
-    if (totalCount > 0) {
-      alert(`${fileCount}개 파일에서 ${totalCount}개 항목을 바꿨습니다`);
-      
-      // 현재 열린 파일 새로고침
-      if (currPath && files[currPath]) {
-        const textarea = document.getElementById('codeEditor');
-        if (textarea) {
-          textarea.value = files[currPath];
-        }
-      }
-      
-      // 파일 목록과 탭 새로고침
-      renderFileTree();
-      renderTabs();
-      updateStatus();
-      
-      // 검색 다시 실행
-      performSearch();
-    } else {
-      alert(`"${searchText}"를 찾을 수 없습니다`);
-    }
-  }
-
-  // Ctrl+F로 검색 모달 열기
-  document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'f') {
-      e.preventDefault();
-      document.getElementById('searchModal').classList.add('active');
-      document.getElementById('searchInput').focus();
-    }
-  });
-
 </script>
 </body>
 </html>
