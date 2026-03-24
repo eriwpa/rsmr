@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor v1.2.1</title>
+<title>EPUB Editor v1.2.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
@@ -554,22 +554,22 @@
   let spine = [];
   let sortMode = 'type';
   let currentFileName = '';
-  let invisModeOn = false; // 제로폭 문자 표시 여부
+  let invisModeOn = false;
 
   // ─── 제로폭/불가시 문자 정의 ───
   const INVIS_CHARS = {
-    '\u2060': 'WJ',      // Word Joiner (U+2060)
-    '\u2061': 'FA',      // Function Application (U+2061)
-    '\u2062': 'IT',      // Invisible Times (U+2062)
-    '\u2063': 'IS',      // Invisible Separator (U+2063)
-    '\u2064': 'IP',      // Invisible Plus (U+2064)
-    '\uFEFF': 'BOM',     // BOM / Zero Width No-Break Space
-    '\u200B': 'ZW',      // Zero Width Space
-    '\u200C': 'ZWNJ',    // Zero Width Non-Joiner
-    '\u200D': 'ZWJ',     // Zero Width Joiner
-    '\u00AD': 'SHY',     // Soft Hyphen
-    '\u180E': 'MVS',     // Mongolian Vowel Separator
-    '\u034F': 'CGJ',     // Combining Grapheme Joiner
+    '\u2060': 'WJ',
+    '\u2061': 'FA',
+    '\u2062': 'IT',
+    '\u2063': 'IS',
+    '\u2064': 'IP',
+    '\uFEFF': 'BOM',
+    '\u200B': 'ZW',
+    '\u200C': 'ZWNJ',
+    '\u200D': 'ZWJ',
+    '\u00AD': 'SHY',
+    '\u180E': 'MVS',
+    '\u034F': 'CGJ',
   };
   const INVIS_REGEX = /[\u2060-\u2064\uFEFF\u200B-\u200D\u00AD\u180E\u034F]/g;
 
@@ -843,8 +843,6 @@
   }
 
   function buildOverlayHtml(text) {
-    // text를 HTML 이스케이프 + 제로폭 문자 → 뱃지로 치환
-    // 제로폭 문자는 실제 너비 0이므로 뱃지가 해당 위치에 삽입됨
     let result = '';
     for(let i = 0; i < text.length; i++) {
       const ch = text[i];
@@ -881,7 +879,6 @@
     overlay.innerHTML = buildOverlayHtml(content);
     overlay.classList.remove('hidden');
 
-    // 스크롤 동기화
     overlay.scrollTop = editor.scrollTop;
     overlay.scrollLeft = editor.scrollLeft;
 
@@ -903,11 +900,9 @@
     const editor = document.getElementById('codeEditor');
     if(editor) {
       if(invisModeOn) {
-        // textarea를 반투명하게 (글자는 유지, overlay가 뱃지 표시)
         editor.style.color = 'transparent';
-        editor.style.caretColor = 'var(--text)'; // 커서는 보이게
+        editor.style.caretColor = 'var(--text)';
         editor.style.webkitTextFillColor = 'transparent';
-        // 하지만 선택 영역이 안보이면 불편 → 선택색만 남김
       } else {
         editor.style.color = '';
         editor.style.caretColor = '';
@@ -930,7 +925,6 @@
     const editor = document.getElementById('codeEditor');
     const overlay = document.getElementById('invisOverlay');
 
-    // 스크롤 동기화
     editor.addEventListener('scroll', () => {
       if(overlay) {
         overlay.scrollTop = editor.scrollTop;
@@ -958,7 +952,6 @@
       }
     });
 
-    // 현재 invisModeOn 상태 반영
     if(invisModeOn) {
       editor.style.color = 'transparent';
       editor.style.caretColor = 'var(--text)';
@@ -967,7 +960,6 @@
     } else {
       const count = countInvisChars(content);
       updateInvisCount(count, false);
-      // 비활성 상태여도 갯수는 카운트
       const btn = document.getElementById('invisToggleBtn');
       if(count > 0) {
         const el = document.getElementById('invisCount');
@@ -1019,18 +1011,34 @@
     const a = document.createElement('a'); a.href = src; a.download = fname; a.click();
   }
 
-  // ─── SAVE ───
+  // ─── SAVE (v1.2.2: DEFLATE 압축 적용, mimetype은 STORE 유지) ───
   btnSave.addEventListener('click', async () => {
     if(!zip) return;
     const mimetimeTime = (zip.files['mimetype'] && zip.files['mimetype'].date) ? zip.files['mimetype'].date : new Date();
+
     for(const path in files) {
       const options = {};
       options.date = (!modifiedFiles.has(path) && fileTimestamps[path]) ? fileTimestamps[path] : new Date();
+      // mimetype은 EPUB 스펙상 반드시 무압축(STORE)이어야 함
+      if(path === 'mimetype') {
+        options.compression = 'STORE';
+      } else {
+        options.compression = 'DEFLATE';
+        options.compressionOptions = { level: 6 };
+      }
       zip.file(path, files[path], options);
     }
+
     Object.keys(zip.files).forEach(path => { if(zip.files[path].dir) zip.files[path].date = mimetimeTime; });
     if(zip.files['mimetype']) zip.files['mimetype'].date = mimetimeTime;
-    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' });
+
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/epub+zip',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = currentFileName; a.click();
     URL.revokeObjectURL(url);
