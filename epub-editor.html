@@ -469,8 +469,8 @@
     /* PC reset-btn은 모바일에서 숨김 */
     .reset-btn.pc-only { display: none !important; }
 
-    /* theme-toggle 모바일 크기 */
-    .theme-toggle { width: 30px; height: 30px; font-size: 14px; }
+    /* theme-toggle 모바일에서 숨김 */
+    .theme-toggle { display: none !important; }
 
     /* invis toggle */
     .invis-toggle-btn { padding: 0; width: 30px; height: 30px; font-size: 12px; }
@@ -674,8 +674,8 @@
 
 <!-- ─── Top bar ─── -->
 <div class="topbar">
-  <div class="logo">👻 EPUB Editor</div>
-  <span class="fname" id="topFname">파일 미열림</span>
+  <div class="logo">👻 EP_Editor</div>
+  <span class="fname" id="topFname">EPUB  미열람</span>
   <div class="spacer"></div>
   <button class="theme-toggle" id="btnTheme" title="테마 전환">🌙</button>
   <!-- invis toggle: PC는 텍스트 포함, 모바일은 아이콘만 -->
@@ -686,7 +686,7 @@
   <button id="btnSavePc" class="primary pc-only" disabled>Save</button>
   <button id="btnResetPc" class="reset-btn pc-only" disabled>Reset</button>
   <!-- 모바일 버튼 -->
-  <button class="tb-btn open-btn mb-only" id="btnOpenMb">📂</button>
+  <button class="tb-btn open-btn mb-only" id="btnOpenMb">📖</button>
   <button id="btnSaveMb" class="tb-btn primary mb-only" disabled title="저장">💾</button>
   <input type="file" id="fileInput" accept=".epub" style="display:none"/>
 </div>
@@ -762,7 +762,7 @@
     if(isMobile) {
       handle.style.display = 'block';
       fab.style.display = 'flex';
-      emptyMsg.textContent = '열기 버튼을 눌러 EPUB을 열고\n좌하단 버튼으로 파일을 선택하세요';
+      emptyMsg.textContent = '버튼을 눌러 EPUB을 열고\n좌하단 버튼으로 파일을 선택하세요';
       // PC 사이드바가 열려있으면 닫기
       closeSidebarIfOpen();
     } else {
@@ -895,7 +895,7 @@
     openTabs = []; activeTab = null; modifiedFiles.clear();
     tocEntries = []; newTocEntries = []; tocFilePath = null;
     opfPath = null; spine = []; currentFileName = '';
-    topFname.textContent = '파일 미열림';
+    topFname.textContent = 'EPUB 미열람';
     setSaveDisabled(true); setControlsDisabled(true);
     fileTree.innerHTML = `<div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">EPUB 파일을 열면<br/>내부 구조가 표시됩니다</div>`;
     editorTabs.innerHTML = '';
@@ -1120,7 +1120,7 @@
   }
 
   function getFileIcon(type) {
-    const icons = { html:'📄', css:'🎨', image:'🖼️', xml:'📋', opf:'📦', ncx:'📑', font:'🔤', text:'📝', binary:'📦' };
+    const icons = { html:'📄', css:'🎨', image:'🖼️', xml:'📋', opf:'📦', ncx:'📑', font:'🔤', text:'📝', binary:'🗳' };
     return icons[type] || '📄';
   }
 
@@ -1186,7 +1186,7 @@
     if(activeTab === path) activeTab = openTabs.length ? openTabs[openTabs.length-1].path : null;
     renderTabs();
     if(activeTab) renderEditor();
-    else editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📂</div><p>파일을 선택하세요</p></div>`;
+    else editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>파일을 선택하세요</p></div>`;
     renderFileTree();
     updateStatus();
   }
@@ -1512,7 +1512,7 @@
   function renderCurrentToc() {
     const container = document.getElementById('currentTocTree');
     if(!tocEntries.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);">목차가 없습니다</div>'; return; }
-    const levelIcons = ['📕','📙','📒','📗','📘','📓'];
+    const levelIcons = ['🟥','🟧','🟨','🟩','🟦','🟪'];
     container.innerHTML = tocEntries.map(e => {
       const level = e.level || 1;
       return `<div class="toc-tree-item level-${level}">
@@ -1526,7 +1526,7 @@
   function renderNewTocList() {
     const container = document.getElementById('newTocList');
     if(!newTocEntries.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);">목차를 불러오세요</div>'; return; }
-    const levelIcons = ['📕','📙','📒','📗','📘','📓'];
+    const levelIcons = ['🟥','🟧','🟨','🟩','🟦','🟪'];
     container.innerHTML = newTocEntries.map((e, idx) => {
       const level = e.level || 1;
       const indent   = '  '.repeat(level - 1);
@@ -1638,7 +1638,7 @@
     else rebuildNavHtml();
     modifiedFiles.add(tocFilePath);
     renderTabs(); renderFileTree(); updateStatus(); closeTocModal();
-    alert('목차가 업데이트되었습니다!');
+    alert('목차가 갱신 되었습니다!');
   }
 
   function rebuildNcxXml() {
