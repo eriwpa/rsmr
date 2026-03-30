@@ -234,6 +234,14 @@
     letter-spacing: 0;
   }
 
+  .token-highlight {
+  background: #ffb8b8;
+  color: #650000;
+  border-radius: 2px;
+  outline: 2px solid #f52323;
+  pointer-events: none;
+  }
+  
   /* TOC editor */
   .toc-editor { flex: 1; padding: 20px; overflow-y: auto; background: var(--bg); }
   .toc-item {
@@ -860,11 +868,66 @@
     const matches = text.match(INVIS_REGEX);
     return matches ? matches.length : 0;
   }
+  function countBookTokens(text) {
+    BOOK_TOKEN_REGEX.lastIndex = 0;
+    const m = text.match(BOOK_TOKEN_REGEX);
+    return m ? m.length : 0;
+  }
+  function updateButtonState(text) {
+    const btn = document.getElementById('invisToggleBtn');
+    const el = document.getElementById('invisCount');
+    if(!btn || !el) return;
+    const zwCount = countInvisChars(text);
+    const tkCount = countBookTokens(text);
+    if(zwCount > 0) {
+      el.textContent = zwCount;
+      el.style.display = 'inline';
+      el.classList.remove('token-count');
+      btn.classList.remove('has-token');
+    } else if(tkCount > 0) {
+      el.textContent = tkCount;
+      el.style.display = 'inline';
+      el.classList.add('token-count');
+      btn.classList.add('has-token');
+    } else {
+      el.style.display = 'none';
+      el.classList.remove('token-count');
+      btn.classList.remove('has-token');
+    }
+  } 
 
   // ─── 수정됨: 일반 텍스트도 오버레이에 그대로 출력 ───
+  // book-token 감지 정규식
+  const BOOK_TOKEN_REGEX = /(<meta\s[^>]*(?:name|content)\s*=\s*["'][^"']*book-token[^"']*["'][^>]*(?:\/>|>(?:.*?)<\/meta>))/gi;
+ 
   function buildOverlayHtml(text) {
+    // 1단계: book-token 태그를 플레이스홀더로 마킹
+    const tokenRanges = [];
+    let m;
+    BOOK_TOKEN_REGEX.lastIndex = 0;
+    while((m = BOOK_TOKEN_REGEX.exec(text)) !== null) {
+      tokenRanges.push({ start: m.index, end: m.index + m[0].length, raw: m[0] });
+    }
+ 
     let result = '';
     for(let i = 0; i < text.length; i++) {
+      // book-token 범위 시작인지 확인
+      const range = tokenRanges.find(r => r.start === i);
+      if(range) {
+        // 범위 전체를 노란 하이라이트로 감싸서 출력
+        let inner = '';
+        for(let j = 0; j < range.raw.length; j++) {
+          const c = range.raw[j];
+          if(c === '&') inner += '&amp;';
+          else if(c === '<') inner += '&lt;';
+          else if(c === '>') inner += '&gt;';
+          else inner += c;
+        }
+        result += `<span class="token-highlight" title="⚠️ book-token 감지">${inner}</span>`;
+        i += range.raw.length - 1;
+        continue;
+      }
+ 
       const ch = text[i];
       if(INVIS_CHARS[ch]) {
         const label = INVIS_CHARS[ch];
@@ -882,29 +945,29 @@
     }
     return result;
   }
-
+ 
   function updateOverlay() {
     const editor = document.getElementById('codeEditor');
     const overlay = document.getElementById('invisOverlay');
     if(!editor || !overlay) return;
-
+ 
     if(!invisModeOn) {
       overlay.classList.add('hidden');
       updateInvisCount(0, false);
       return;
     }
-
+ 
     const content = editor.value;
     const count = countInvisChars(content);
     overlay.innerHTML = buildOverlayHtml(content);
     overlay.classList.remove('hidden');
-
+ 
     overlay.scrollTop = editor.scrollTop;
     overlay.scrollLeft = editor.scrollLeft;
-
+ 
     updateInvisCount(count, true);
   }
-
+ 
   function updateInvisCount(count, show) {
     const el = document.getElementById('invisCount');
     if(!el) return;
@@ -977,12 +1040,7 @@
       editor.style.caretColor = 'var(--text)';
       updateOverlay();
     } else {
-      const count = countInvisChars(content);
-      updateInvisCount(count, false);
-      if(count > 0) {
-        const el = document.getElementById('invisCount');
-        if(el) { el.textContent = count; el.style.display = 'inline'; }
-      }
+    updateButtonState(content);
     }
   }
 
