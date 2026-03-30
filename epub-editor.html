@@ -137,8 +137,12 @@
     font-size: 12px; font-family: var(--font-ui); font-weight: 600;
     padding: 0 8px; height: 30px;
     border-radius: 4px; cursor: pointer;
-    display: flex; align-items: center; gap: 4px;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
     transition: all .15s; flex-shrink: 0;
+    line-height: 1;
+  }
+  .invis-toggle-btn .eye-icon {
+    display: block; line-height: 1; font-style: normal;
   }
   .invis-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
   .invis-toggle-btn.active { background: #fff0f0; border-color: #ff4757; color: #ff4757; }
@@ -675,31 +679,20 @@
   <div class="spacer"></div>
   <button class="theme-toggle" id="btnTheme" title="테마 전환">🌙</button>
   <!-- invis toggle: PC는 텍스트 포함, 모바일은 아이콘만 -->
-  <button class="invis-toggle-btn" id="invisToggleBtn" onclick="toggleInvisMode()" title="제로폭 문자 표시 토글">👀<span class="invis-count" id="invisCount" style="display:none">0</span>
+  <button class="invis-toggle-btn" id="invisToggleBtn" onclick="toggleInvisMode()" title="제로폭 문자 표시 토글"><i class="eye-icon">👀</i><span class="invis-count" id="invisCount" style="display:none">0</span>
   </button>
   <!-- PC 버튼 -->
   <button class="open-btn pc-only" id="btnOpenPc">Open</button>
   <button id="btnSavePc" class="primary pc-only" disabled>Save</button>
   <button id="btnResetPc" class="reset-btn pc-only" disabled>Reset</button>
   <!-- 모바일 버튼 -->
-  <button class="tb-btn open-btn mb-only" id="btnOpenMb">📖</button>
+  <button class="tb-btn open-btn mb-only" id="btnOpenMb">📂</button>
   <button id="btnSaveMb" class="tb-btn primary mb-only" disabled title="저장">💾</button>
   <input type="file" id="fileInput" accept=".epub" style="display:none"/>
 </div>
 
 <!-- ─── Layout ─── -->
 <div class="layout">
-  <!-- 에디터 영역 -->
-  <div class="main">
-    <div class="editor-tabs" id="editorTabs"></div>
-    <div class="editor-wrap" id="editorWrap">
-      <div class="empty-state">
-        <div class="big-icon">📖</div>
-        <p id="emptyMsg">왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
-      </div>
-    </div>
-  </div>
-
   <!-- 파일 트리 (PC: sidebar / 모바일: 드로어) -->
   <div class="sidebar" id="sidebar">
     <!-- 드로어 핸들 (모바일에서만 보임) -->
@@ -717,6 +710,17 @@
     <div class="file-tree" id="fileTree">
       <div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">
         EPUB 파일을 열면<br/>내부 구조가 표시됩니다
+      </div>
+    </div>
+  </div>
+
+  <!-- 에디터 영역 -->
+  <div class="main">
+    <div class="editor-tabs" id="editorTabs"></div>
+    <div class="editor-wrap" id="editorWrap">
+      <div class="empty-state">
+        <div class="big-icon">📖</div>
+        <p id="emptyMsg">왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
       </div>
     </div>
   </div>
@@ -758,7 +762,7 @@
     if(isMobile) {
       handle.style.display = 'block';
       fab.style.display = 'flex';
-      emptyMsg.textContent = '버튼을 눌러 EPUB을 열고\n좌하단 버튼으로 파일을 선택하세요';
+      emptyMsg.textContent = '열기 버튼을 눌러 EPUB을 열고\n좌하단 버튼으로 파일을 선택하세요';
       // PC 사이드바가 열려있으면 닫기
       closeSidebarIfOpen();
     } else {
@@ -1182,7 +1186,7 @@
     if(activeTab === path) activeTab = openTabs.length ? openTabs[openTabs.length-1].path : null;
     renderTabs();
     if(activeTab) renderEditor();
-    else editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>파일을 선택하세요</p></div>`;
+    else editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📂</div><p>파일을 선택하세요</p></div>`;
     renderFileTree();
     updateStatus();
   }
