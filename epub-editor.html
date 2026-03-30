@@ -352,8 +352,16 @@
   .search-input-wrap { display: flex; gap: 10px; margin-bottom: 15px; }
   .search-input-wrap input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
   .search-input-wrap input:focus { border-color: var(--accent); }
-  .search-options { display: flex; gap: 16px; margin-bottom: 15px; }
+  .search-options { display: flex; gap: 16px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
   .search-options label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+  .filter-btns { display: flex; gap: 4px; align-items: center; }
+  .filter-btn {
+    padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--text-dim);
+    font-family: var(--font-ui); transition: all .12s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
   .search-results { border: 1px solid var(--border); border-radius: 6px; max-height: 350px; overflow-y: auto; background: var(--bg); }
   .search-result-item { padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12px; }
   .search-result-item:hover { background: var(--bg-hover); }
@@ -433,7 +441,12 @@
       </div>
       <div class="search-options">
         <label><input type="checkbox" id="caseSensitive"/> 대소문자 구분</label>
-        <label><input type="checkbox" id="htmlOnly" checked/> HTML 파일만</label>
+        <div class="filter-btns">
+          <span style="font-size:11px;color:var(--text-dim);">범위:</span>
+          <button class="filter-btn active" data-filter="all" onclick="setSearchFilter('all')">전체</button>
+          <button class="filter-btn" data-filter="html" onclick="setSearchFilter('html')">Text</button>
+          <button class="filter-btn" data-filter="css" onclick="setSearchFilter('css')">CSS</button>
+        </div>
       </div>
       <div style="margin-bottom:10px;font-size:12px;color:var(--text-dim);" id="searchResultCount">검색 결과: 0개</div>
       <div class="search-results" id="searchResults"></div>
@@ -490,8 +503,8 @@
   <button class="invis-toggle-btn" id="invisToggleBtn" onclick="toggleInvisMode()" title="제로폭 문자 표시 토글">
    👀<span class="invis-count" id="invisCount" style="display:none">0</span>
   </button>
-  <button class="open-btn" id="btnOpen">Open EPUB</button>
-  <button id="btnSave" class="primary" disabled>Save EPUB</button>
+  <button class="open-btn" id="btnOpen">Open</button>
+  <button id="btnSave" class="primary" disabled>Save</button>
   <button id="btnReset" class="reset-btn" disabled>Reset</button>
   <input type="file" id="fileInput" accept=".epub" style="display:none"/>
 </div>
@@ -659,7 +672,7 @@
       if(zipEntry.dir) continue;
       fileTimestamps[path] = zipEntry.date;
       const ext = getExt(path).toLowerCase();
-      const textExts = ['html','xhtml','htm','xml','opf','ncx','css','txt','svg','js','json'];
+      const textExts = ['html','xhtml','htm','xml','xhml','xhm','opf','ncx','css','txt','svg','js','json'];
       if(textExts.includes(ext)) {
         files[path] = await zipEntry.async('string');
         detectFileType(path);
@@ -1052,15 +1065,28 @@
   function openSearchModal() { document.getElementById('searchModal').classList.add('show'); document.getElementById('searchInput').focus(); }
   function closeSearchModal() { document.getElementById('searchModal').classList.remove('show'); renderFileTree(); renderTabs(); updateStatus(); }
 
+  let searchFilter = 'all'; // 'all' | 'html' | 'css'
+
+  function setSearchFilter(f) {
+    searchFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  }
+
+  function matchesFilter(path) {
+    const lower = path.toLowerCase();
+    if(searchFilter === 'html') return /\.(html|xhtml|xml|xhml|htm)$/.test(lower);
+    if(searchFilter === 'css') return lower.endsWith('.css');
+    return true; // 전체
+  }
+
   function performSearch() {
     const query = document.getElementById('searchInput').value.trim();
     if(!query) return;
     const caseSensitive = document.getElementById('caseSensitive').checked;
-    const htmlOnly = document.getElementById('htmlOnly').checked;
     const results = [];
     for(const [path, content] of Object.entries(files)) {
       if(typeof content !== 'string') continue;
-      if(htmlOnly && !path.toLowerCase().match(/\.(html|xhtml)$/)) continue;
+      if(!matchesFilter(path)) continue;
       const lines = content.split('\n');
       lines.forEach((line, idx) => {
         const sl = caseSensitive ? line : line.toLowerCase();
@@ -1310,12 +1336,11 @@
     const replaceText = document.getElementById('replaceInput').value;
     if(!searchText) { alert('찾을 텍스트를 입력하세요'); return; }
     const caseSensitive = document.getElementById('caseSensitive').checked;
-    const htmlOnly = document.getElementById('htmlOnly').checked;
     if(!confirm(`"${searchText}"를 "${replaceText}"로 모두 바꾸시겠습니까?`)) return;
 
     let totalCount = 0, fileCount = 0;
     Object.keys(files).forEach(path => {
-      if(htmlOnly && !['.html','.xhtml','.htm'].some(ext => path.toLowerCase().endsWith(ext))) return;
+      if(!matchesFilter(path)) return;
       let content = files[path]; let count = 0;
       if(caseSensitive) {
         const parts = content.split(searchText); count = parts.length - 1;
