@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor v1.2.2</title>
+<title>EPUB Editor v1.2.3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
@@ -200,7 +200,7 @@
   }
   .code-editor::selection { background: rgba(124,106,255,0.25); }
 
-  /* Invisible char highlight overlay */
+  /* ─── 수정됨: 오버레이가 본문도 표시 ─── */
   .invis-overlay {
     position: absolute;
     top: 0; left: 0;
@@ -214,7 +214,7 @@
     overflow: hidden;
     white-space: pre-wrap;
     word-break: break-all;
-    color: transparent;
+    color: var(--text); /* transparent → var(--text) */
     tab-size: 2;
   }
   .invis-overlay.hidden { display: none; }
@@ -487,6 +487,9 @@
   <span class="fname" id="topFname">파일 미열림</span>
   <div class="spacer"></div>
   <button class="theme-toggle" id="btnTheme" title="테마 전환">🌙</button>
+  <button class="invis-toggle-btn" id="invisToggleBtn" onclick="toggleInvisMode()" title="제로폭 문자 표시 토글">
+   👀<span class="invis-count" id="invisCount" style="display:none">0</span>
+  </button>
   <button class="open-btn" id="btnOpen">Open EPUB</button>
   <button id="btnSave" class="primary" disabled>Save EPUB</button>
   <button id="btnReset" class="reset-btn" disabled>Reset</button>
@@ -529,9 +532,6 @@
   <span id="statusFile">—</span>
   <span id="statusType">—</span>
   <span id="statusModified"></span>
-  <button class="invis-toggle-btn" id="invisToggleBtn" onclick="toggleInvisMode()" title="제로폭 문자 표시 토글">
-    👀 ZW <span class="invis-count" id="invisCount" style="display:none">0</span>
-  </button>
   <div style="flex:1"></div>
   <span id="statusTimestamp">—</span>
   <span id="statusSize">—</span>
@@ -644,6 +644,12 @@
 
   // ─── LOAD EPUB ───
   async function loadEpub(file) {
+    // 새 파일 열 때 자동 리셋 (invisMode 상태도 초기화)
+    invisModeOn = false;
+    const zwBtn = document.getElementById('invisToggleBtn');
+    if(zwBtn) zwBtn.classList.remove('active');
+    resetEditor();
+
     zip = await JSZip.loadAsync(file);
     files = {}; fileTypes = {}; fileTimestamps = {}; modifiedFiles.clear();
     openTabs = []; activeTab = null; spine = []; tocEntries = [];
@@ -842,6 +848,7 @@
     return matches ? matches.length : 0;
   }
 
+  // ─── 수정됨: 일반 텍스트도 오버레이에 그대로 출력 ───
   function buildOverlayHtml(text) {
     let result = '';
     for(let i = 0; i < text.length; i++) {
@@ -892,6 +899,7 @@
     el.style.display = (show && count > 0) ? 'inline' : 'none';
   }
 
+  // ─── 수정됨: textarea를 visibility:hidden으로 숨기고 오버레이로 본문 표시 ───
   function toggleInvisMode() {
     invisModeOn = !invisModeOn;
     const btn = document.getElementById('invisToggleBtn');
@@ -900,13 +908,9 @@
     const editor = document.getElementById('codeEditor');
     if(editor) {
       if(invisModeOn) {
-        editor.style.color = 'transparent';
-        editor.style.caretColor = 'var(--text)';
-        editor.style.webkitTextFillColor = 'transparent';
+        editor.style.visibility = 'hidden';  // 텍스트 숨김(커서 포함), 오버레이가 대신 표시
       } else {
-        editor.style.color = '';
-        editor.style.caretColor = '';
-        editor.style.webkitTextFillColor = '';
+        editor.style.visibility = '';
       }
       updateOverlay();
     } else {
@@ -952,15 +956,13 @@
       }
     });
 
+    // ─── 수정됨: ZW 모드 켜져 있으면 visibility hidden 적용 ───
     if(invisModeOn) {
-      editor.style.color = 'transparent';
-      editor.style.caretColor = 'var(--text)';
-      editor.style.webkitTextFillColor = 'transparent';
+      editor.style.visibility = 'hidden';
       updateOverlay();
     } else {
       const count = countInvisChars(content);
       updateInvisCount(count, false);
-      const btn = document.getElementById('invisToggleBtn');
       if(count > 0) {
         const el = document.getElementById('invisCount');
         if(el) { el.textContent = count; el.style.display = 'inline'; }
@@ -1011,7 +1013,7 @@
     const a = document.createElement('a'); a.href = src; a.download = fname; a.click();
   }
 
-  // ─── SAVE (v1.2.2: DEFLATE 압축 적용, mimetype은 STORE 유지) ───
+  // ─── SAVE (v1.2.3: DEFLATE 압축 적용, mimetype은 STORE 유지) ───
   btnSave.addEventListener('click', async () => {
     if(!zip) return;
     const mimetimeTime = (zip.files['mimetype'] && zip.files['mimetype'].date) ? zip.files['mimetype'].date : new Date();
@@ -1019,7 +1021,6 @@
     for(const path in files) {
       const options = {};
       options.date = (!modifiedFiles.has(path) && fileTimestamps[path]) ? fileTimestamps[path] : new Date();
-      // mimetype은 EPUB 스펙상 반드시 무압축(STORE)이어야 함
       if(path === 'mimetype') {
         options.compression = 'STORE';
       } else {
