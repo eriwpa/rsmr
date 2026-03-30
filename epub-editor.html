@@ -1344,6 +1344,7 @@
     let totalCount = 0, fileCount = 0;
     Object.keys(files).forEach(path => {
       if(!matchesFilter(path)) return;
+      if(typeof files[path] !== 'string') return;
       let content = files[path]; let count = 0;
       if(caseSensitive) {
         const parts = content.split(searchText); count = parts.length - 1;
