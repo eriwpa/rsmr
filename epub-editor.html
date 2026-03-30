@@ -921,9 +921,11 @@
     const editor = document.getElementById('codeEditor');
     if(editor) {
       if(invisModeOn) {
-        editor.style.visibility = 'hidden';  // 텍스트 숨김(커서 포함), 오버레이가 대신 표시
+        editor.style.color = 'transparent';
+        editor.style.caretColor = 'var(--text)'
       } else {
-        editor.style.visibility = '';
+        editor.style.color = '';
+        editor.style.caretColor = '';
       }
       updateOverlay();
     } else {
@@ -971,7 +973,8 @@
 
     // ─── 수정됨: ZW 모드 켜져 있으면 visibility hidden 적용 ───
     if(invisModeOn) {
-      editor.style.visibility = 'hidden';
+      editor.style.color = 'transparent';
+      editor.style.caretColor = 'var(--text)';
       updateOverlay();
     } else {
       const count = countInvisChars(content);
