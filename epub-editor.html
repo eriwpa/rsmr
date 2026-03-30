@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor v1.2.3</title>
+<title>EPUB Editor v1.3.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
@@ -43,18 +43,19 @@
     --yellow: #fbbf24;
   }
 
-  * { margin:0; padding:0; box-sizing:border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 
   body {
     font-family: var(--font-ui);
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
-    overflow: auto;
+    overflow: hidden;
     user-select: none;
   }
 
-  /* ─── TOP BAR ─── */
+  /* ════════════════════════════════════════
+     TOP BAR — PC 스타일 (기본)
+  ════════════════════════════════════════ */
   .topbar {
     display: flex;
     align-items: center;
@@ -65,8 +66,14 @@
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-  .topbar .logo { font-weight: 600; font-size: 15px; color: var(--accent); letter-spacing: 0.5px; }
-  .topbar .spacer { flex:1; }
+  .topbar .logo { font-weight: 600; font-size: 15px; color: var(--accent); letter-spacing: 0.5px; white-space: nowrap; }
+  .topbar .spacer { flex: 1; }
+  .topbar .fname {
+    font-size: 12px; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* PC topbar 버튼 */
   .topbar button {
     background: var(--bg3);
     border: 1px solid var(--border);
@@ -78,6 +85,7 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all .15s;
+    flex-shrink: 0;
   }
   .topbar button:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text-bright); }
   .topbar button.primary { background: #ffd9df; border-color: #ffd9df; color: #4c4143; }
@@ -86,22 +94,68 @@
   .topbar button.open-btn:hover { background: #7c6aff; }
   .topbar button.reset-btn { background: #b3deeb; border-color: #b3deeb; color: white; }
   .topbar button.reset-btn:hover { background: #69a4b7; }
-  .topbar button:disabled { opacity: .35; cursor: default; }
-  .topbar .fname {
-    font-size: 12px; color: var(--text-dim);
-    max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  .topbar button:disabled { opacity: .35; cursor: default; pointer-events: none; }
+
+  /* 모바일 topbar 버튼 — .tb-btn (기본 숨김, 모바일에서만 표시) */
+  .tb-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: none;
+    align-items: center; justify-content: center;
+    transition: all .15s;
+    flex-shrink: 0;
   }
+  .tb-btn:active { background: var(--bg-hover); border-color: var(--accent); }
+  .tb-btn.primary { background: #ffd9df; border-color: #ffd9df; color: #4c4143; }
+  .tb-btn.primary:active { background: #ff8b9a; }
+  .tb-btn.open-btn { background: #c4c1ef; border-color: #c4c1ef; color: white; font-weight: 600; font-size: 11px; width: auto; padding: 0 10px; }
+  .tb-btn.open-btn:active { background: #7c6aff; }
+  .tb-btn:disabled { opacity: .35; pointer-events: none; }
+
+  /* PC 전용 버튼 */
+  .pc-only { display: flex; }
+  /* 모바일 전용 버튼 */
+  .mb-only { display: none !important; }
+
+  /* theme toggle */
   .theme-toggle {
     background: var(--bg3); border: 1px solid var(--border); color: var(--text);
     font-size: 16px; width: 32px; height: 32px; border-radius: 6px; cursor: pointer;
     display: flex; align-items: center; justify-content: center; transition: all .15s;
+    flex-shrink: 0;
   }
   .theme-toggle:hover { background: var(--bg-hover); border-color: var(--accent); }
 
-  /* ─── LAYOUT ─── */
-  .layout { display: flex; height: calc(100dvh - 48px - 28px); overflow: hidden; }
+  /* invis toggle */
+  .invis-toggle-btn {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text-dim);
+    font-size: 12px; font-family: var(--font-ui); font-weight: 600;
+    padding: 0 8px; height: 30px;
+    border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    transition: all .15s; flex-shrink: 0;
+  }
+  .invis-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .invis-toggle-btn.active { background: #fff0f0; border-color: #ff4757; color: #ff4757; }
+  .invis-count {
+    font-size: 8px; background: #ff4757; color: white;
+    border-radius: 8px; padding: 0 4px; font-weight: 700;
+  }
 
-  /* ─── SIDEBAR ─── */
+  /* ════════════════════════════════════════
+     LAYOUT — PC (기본)
+  ════════════════════════════════════════ */
+  .layout {
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ─── PC SIDEBAR ─── */
   .sidebar {
     width: 380px; min-width: 380px;
     background: var(--bg2); border-right: 1px solid var(--border);
@@ -110,13 +164,16 @@
   .sidebar-header {
     padding: 10px 14px; font-size: 10px; font-weight: 600; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: 1.2px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
+    flex-shrink: 0;
   }
   .sidebar-header .controls { display: flex; gap: 4px; align-items: center; margin-left: auto; }
+
   .sort-btn, .action-btn {
     cursor: pointer; color: var(--text-dim); font-size: 11px; padding: 3px 8px;
     border-radius: 4px; transition: all .15s; background: transparent;
     border: 1px solid transparent; font-family: var(--font-ui); font-weight: 600;
+    white-space: nowrap;
   }
   .sort-btn:hover, .action-btn:hover { background: var(--bg3); border-color: var(--border); color: var(--text); }
   .sort-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
@@ -125,7 +182,7 @@
   .action-btn.search-btn { background: #c2f1d6; color: #2c2c2c; border-color: #83d5a6; }
   .action-btn.search-btn:hover { background: #7ae1a5; border-color: #7ae1a5; }
 
-  .file-tree { flex: 1; overflow-y: auto; padding: 6px 0; }
+  .file-tree { flex: 1; overflow-y: auto; padding: 6px 0; -webkit-overflow-scrolling: touch; }
   .file-group-label {
     padding: 8px 14px 4px; font-size: 9px; font-weight: 600; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
@@ -133,6 +190,7 @@
   .file-group-label:hover { color: var(--text); }
   .file-group { margin-bottom: 4px; }
   .file-group.collapsed .file-group-items { display: none; }
+
   .file-item {
     display: flex; align-items: center; gap: 8px; padding: 5px 14px;
     font-size: 11px; color: var(--text); cursor: pointer; transition: background .12s;
@@ -151,18 +209,21 @@
   }
 
   /* ─── MAIN ─── */
-  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 
+  /* ─── EDITOR TABS ─── */
   .editor-tabs {
     display: flex; align-items: center; gap: 2px; padding: 6px 10px 0;
-    background: var(--bg); flex-shrink: 0; overflow-x: auto;
+    background: var(--bg); flex-shrink: 0; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
   }
+  .editor-tabs::-webkit-scrollbar { display: none; }
   .tab {
     padding: 6px 12px; font-size: 11px; color: var(--text-dim);
     border-radius: 6px 6px 0 0; cursor: pointer; background: transparent; border: none;
     font-family: var(--font-ui); transition: all .12s; white-space: nowrap;
     max-width: 160px; overflow: hidden; text-overflow: ellipsis;
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
   }
   .tab:hover { color: var(--text); background: var(--bg3); }
   .tab.active { background: var(--bg2); color: var(--text-bright); border: 1px solid var(--border); border-bottom: 1px solid var(--bg2); margin-bottom: -1px; }
@@ -170,79 +231,49 @@
   .tab .close { opacity: .4; cursor: pointer; font-size: 14px; }
   .tab .close:hover { opacity: 1; color: var(--red); }
 
+  /* ─── EDITOR WRAP ─── */
   .editor-wrap { flex: 1; display: flex; flex-direction: column; border-top: 1px solid var(--border); overflow: hidden; background: var(--bg2); }
 
-  /* ─── CODE EDITOR WITH OVERLAY ─── */
+  /* ─── CODE EDITOR ─── */
   .editor-container {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column;
   }
-
   .code-editor {
-    flex: 1;
-    width: 100%;
-    background: var(--bg);
-    color: var(--text);
+    flex: 1; width: 100%;
+    background: var(--bg); color: var(--text);
     font-family: var(--font-code);
-    font-size: 13px;
-    line-height: 1.7;
+    font-size: 13px; line-height: 1.7;
     padding: 16px 20px;
-    resize: none;
-    border: none;
-    outline: none;
-    overflow: auto;
-    tab-size: 2;
-    position: relative;
-    z-index: 2;
+    resize: none; border: none; outline: none;
+    overflow: auto; tab-size: 2;
+    position: relative; z-index: 2;
   }
   .code-editor::selection { background: rgba(124,106,255,0.25); }
 
-  /* ─── 수정됨: 오버레이가 본문도 표시 ─── */
   .invis-overlay {
-    position: absolute;
-    top: 0; left: 0;
+    position: absolute; top: 0; left: 0;
     width: 100%; height: 100%;
     padding: 16px 20px;
     font-family: var(--font-code);
-    font-size: 13px;
-    line-height: 1.7;
-    pointer-events: none;
-    z-index: 3;
-    overflow: hidden;
-    white-space: pre-wrap;
-    word-break: break-all;
-    color: var(--text); /* transparent → var(--text) */
-    tab-size: 2;
+    font-size: 13px; line-height: 1.7;
+    pointer-events: none; z-index: 3;
+    overflow: hidden; white-space: pre-wrap; word-break: break-all;
+    color: var(--text); tab-size: 2;
   }
   .invis-overlay.hidden { display: none; }
 
   .invis-badge {
-    display: inline;
-    background: #ff4757;
-    color: #fff;
-    font-size: 9px;
-    font-family: var(--font-ui);
-    font-weight: 700;
-    border-radius: 3px;
-    padding: 1px 3px;
-    vertical-align: middle;
-    pointer-events: none;
-    line-height: 1;
-    letter-spacing: 0;
+    display: inline; background: #ff4757; color: #fff;
+    font-size: 9px; font-family: var(--font-ui); font-weight: 700;
+    border-radius: 3px; padding: 1px 3px; vertical-align: middle;
+    pointer-events: none; line-height: 1; letter-spacing: 0;
+  }
+  .token-highlight {
+    background: #ffb8b8; color: #650000;
+    border-radius: 2px; outline: 2px solid #f52323; pointer-events: none;
   }
 
-  .token-highlight {
-  background: #ffb8b8;
-  color: #650000;
-  border-radius: 2px;
-  outline: 2px solid #f52323;
-  pointer-events: none;
-  }
-  
-  /* TOC editor */
+  /* ─── TOC ─── */
   .toc-editor { flex: 1; padding: 20px; overflow-y: auto; background: var(--bg); }
   .toc-item {
     display: flex; align-items: center; gap: 8px; padding: 8px 12px;
@@ -250,7 +281,7 @@
   }
   .toc-item:hover { border-color: var(--border); background: var(--bg3); }
   .toc-item.dragging { opacity: .4; }
-  .toc-item .drag-handle { color: var(--text-dim); font-size: 14px; cursor: grab; }
+  .toc-item .drag-handle { color: var(--text-dim); font-size: 14px; }
   .toc-item input.toc-label {
     flex: 1; background: transparent; border: none; color: var(--text-bright);
     font-family: var(--font-ui); font-size: 13px; outline: none;
@@ -263,71 +294,46 @@
   }
   .toc-item button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
   .toc-item button:hover { background: var(--bg3); color: var(--red); }
-  .toc-actions { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
+  .toc-actions { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; flex-wrap: wrap; }
   .toc-actions button {
     background: var(--bg3); border: 1px solid var(--border); color: var(--text);
     font-family: var(--font-ui); font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
   }
   .toc-actions button:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* Image preview */
+  /* ─── IMAGE PREVIEW ─── */
   .img-preview-wrap {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: var(--bg); gap: 16px; padding: 20px; overflow: auto;
   }
   .img-preview-wrap img { max-width: 100%; max-height: 60vh; border-radius: 8px; border: 1px solid var(--border); }
-  .img-meta { font-size: 11px; color: var(--text-dim); font-family: var(--font-code); }
+  .img-meta { font-size: 11px; color: var(--text-dim); font-family: var(--font-code); text-align: center; }
   .img-actions { display: flex; gap: 8px; }
   .img-actions button {
     background: var(--bg3); border: 1px solid var(--border); color: var(--text);
     font-family: var(--font-ui); font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
   }
   .img-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .img-actions button.danger { background: #ffe5e5; color: #d32f2f; border-color: #ffcdd2; }
+  .img-actions button.danger:hover { background: #ffcdd2; }
 
-  /* Empty state */
+  /* ─── Empty state ─── */
   .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--text-dim); }
   .empty-state .big-icon { font-size: 48px; opacity: .3; }
-  .empty-state p { font-size: 13px; }
+  .empty-state p { font-size: 13px; text-align: center; }
 
-  /* Status bar */
+  /* ─── STATUS BAR ─── */
   .statusbar {
-    height: 28px; padding: 0 14px; background: var(--bg2); border-top: 1px solid var(--border);
-    display: flex; align-items: center; gap: 20px; font-size: 10px; color: var(--text-dim); flex-shrink: 0;
+    height: 28px; padding: 0 14px;
+    background: var(--bg2); border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 20px;
+    font-size: 10px; color: var(--text-dim); flex-shrink: 0;
+    overflow: hidden;
   }
   .statusbar .modified { color: var(--yellow); }
+  #statusFile { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* Invisible char toggle button */
-  .invis-toggle-btn {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-size: 10px;
-    font-family: var(--font-ui);
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all .15s;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .invis-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .invis-toggle-btn.active {
-    background: #fff0f0;
-    border-color: #ff4757;
-    color: #ff4757;
-  }
-  .invis-count {
-    font-size: 9px;
-    background: #ff4757;
-    color: white;
-    border-radius: 8px;
-    padding: 0 5px;
-    font-weight: 700;
-  }
-
-  /* Drop overlay */
+  /* ─── Drop overlay ─── */
   .drop-overlay {
     display: none; position: fixed; inset: 0; background: rgba(14,15,17,.85);
     z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
@@ -337,7 +343,7 @@
   .drop-overlay .drop-box p { font-size: 18px; color: var(--accent); font-weight: 500; }
   .drop-overlay .drop-box .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
 
-  /* Modal */
+  /* ─── MODAL (PC) ─── */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
   .modal-overlay.show { display: flex; }
   .modal {
@@ -347,17 +353,17 @@
   }
   .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
   .modal-header h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); }
-  .modal-header .close-btn { background: none; border: none; font-size: 20px; color: var(--text-dim); cursor: pointer; }
+  .modal-header .close-btn { background: none; border: none; font-size: 20px; color: var(--text-dim); cursor: pointer; padding: 4px 8px; }
   .modal-header .close-btn:hover { color: var(--red); }
-  .modal-body { flex: 1; overflow-y: auto; padding: 20px; }
+  .modal-body { flex: 1; overflow-y: auto; padding: 20px; -webkit-overflow-scrolling: touch; }
   .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
   .modal-footer button { padding: 8px 20px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text); }
   .modal-footer button:hover { border-color: var(--accent); }
   .modal-footer button.primary { background: var(--accent); border-color: var(--accent); color: white; }
   .modal-footer button.primary:hover { opacity: 0.9; }
 
-  /* Search modal */
-  .search-input-wrap { display: flex; gap: 10px; margin-bottom: 15px; }
+  /* ─── SEARCH MODAL ─── */
+  .search-input-wrap { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
   .search-input-wrap input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
   .search-input-wrap input:focus { border-color: var(--accent); }
   .search-options { display: flex; gap: 16px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
@@ -365,8 +371,7 @@
   .filter-btns { display: flex; gap: 4px; align-items: center; }
   .filter-btn {
     padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer;
-    border: 1px solid var(--border); background: var(--bg3); color: var(--text-dim);
-    font-family: var(--font-ui); transition: all .12s;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--text-dim); font-family: var(--font-ui); transition: all .12s;
   }
   .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
   .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
@@ -377,7 +382,7 @@
   .search-result-item .file-header { color: var(--accent); font-weight: 600; padding: 4px 0; }
   .search-result-item .line-info { color: var(--text-dim); }
 
-  /* TOC Dialog */
+  /* ─── TOC DIALOG ─── */
   .toc-section { margin-bottom: 20px; }
   .toc-section-header { font-size: 13px; font-weight: 600; color: var(--text-bright); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .toc-btn-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
@@ -404,26 +409,180 @@
   .new-toc-item .target { font-size: 10px; color: var(--text-dim); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .new-toc-item .level-badge { font-size: 9px; padding: 2px 6px; border-radius: 3px; background: var(--accent-dim); color: var(--accent); }
   .toc-edit-btns { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
-  .toc-edit-btns button { padding: 5px 10px; font-size: 11px; }
+  .toc-edit-btns button { padding: 5px 10px; font-size: 11px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg3); color: var(--text); cursor: pointer; }
+  .toc-edit-btns button:hover { border-color: var(--accent); }
   .toc-edit-btns button.danger { background: #ffe5e5; color: #d32f2f; border-color: #ffcdd2; }
   .toc-edit-btns button.danger:hover { background: #ffcdd2; }
 
-  /* Scrollbar */
+  /* ─── SCROLLBAR ─── */
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
+  /* ─── PC 전용: 컨텍스트 메뉴 ─── */
+  .ctx-menu {
+    display: none;
+    position: fixed;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    z-index: 999;
+    min-width: 140px;
+    overflow: hidden;
+  }
+  .ctx-menu.show { display: block; }
+  .ctx-menu-item {
+    padding: 9px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+    transition: background .1s;
+  }
+  .ctx-menu-item:hover { background: var(--bg-hover); }
+  .ctx-menu-item.danger { color: var(--red); }
+  .ctx-menu-item.danger:hover { background: #fff0f0; }
+  .ctx-menu-sep { height: 1px; background: var(--border); margin: 3px 0; }
+
+  /* ════════════════════════════════════════
+     MOBILE OVERRIDES  (≤768px)
+  ════════════════════════════════════════ */
   @media (max-width: 768px) {
-    .sidebar { width: 220px; min-width: 220px; }
-    .file-item { padding: 5px 8px; font-size: 10px; }
-    .file-item .timestamp { display: none; }
+    body { height: 100dvh; }
+
+    /* topbar */
+    .topbar { height: 42px; gap: 6px; padding: 0 10px; }
+    .topbar .logo { font-size: 13px; letter-spacing: 0.3px; }
+    .topbar .fname { font-size: 10px; flex: 1; min-width: 0; }
+    .topbar .spacer { display: none; }
+
+    /* PC 버튼 숨기고 tb-btn 보이기 */
+    .pc-only { display: none !important; }
+    .mb-only { display: flex !important; }
+    .tb-btn { display: flex; }
+    /* PC reset-btn은 모바일에서 숨김 */
+    .reset-btn.pc-only { display: none !important; }
+
+    /* theme-toggle 모바일 크기 */
+    .theme-toggle { width: 30px; height: 30px; font-size: 14px; }
+
+    /* invis toggle */
+    .invis-toggle-btn { padding: 0; width: 30px; height: 30px; font-size: 12px; }
+
+    /* layout */
+    .layout { flex-direction: column; height: calc(100dvh - 42px - 22px); }
+
+    /* sidebar → 하단 드로어 */
+    .sidebar {
+      position: fixed;
+      bottom: 22px; left: 0; right: 0;
+      width: auto; min-width: unset;
+      height: 50vh;
+      border-right: none;
+      border-top: 2px solid var(--accent);
+      transform: translateY(100%);
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
+      z-index: 50;
+      border-radius: 14px 14px 0 0;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
+    }
+    .sidebar.open { transform: translateY(0); }
+
+    /* 드로어 핸들 */
+    .drawer-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 8px auto 0;
+      flex-shrink: 0;
+      display: block;
+    }
+
+    /* sidebar-header 모바일 */
+    .sidebar-header { padding: 6px 12px; font-size: 9px; letter-spacing: 1.2px; }
+    .sort-btn, .action-btn { font-size: 10px; padding: 3px 7px; }
+
+    /* file-item 모바일 */
+    .file-item { font-size: 12px; padding: 7px 12px; }
+    .file-item .timestamp { font-size: 9px; }
+
+    /* editor tabs 모바일 */
+    .editor-tabs { padding: 4px 8px 0; }
+    .tab { padding: 4px 10px; font-size: 10px; max-width: 130px; }
+
+    /* code editor 모바일 */
+    .code-editor { font-size: 12px; line-height: 1.65; padding: 10px 12px; }
+    .invis-overlay { font-size: 12px; line-height: 1.65; padding: 10px 12px; }
+
+    /* status bar 모바일 */
+    .statusbar { height: 22px; padding: 0 10px; gap: 10px; font-size: 9px; }
+
+    /* FAB 파일 트리 버튼 */
+    .fab-files {
+      position: fixed;
+      bottom: calc(22px + 12px);
+      left: 12px;
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(90,79,212,0.4);
+      z-index: 49;
+      transition: all .2s;
+    }
+    .fab-files:active { transform: scale(0.92); }
+    .fab-files.drawer-open { background: var(--red); }
+
+    /* 드로어 딤 */
+    .drawer-dim {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.3); z-index: 49;
+    }
+    .drawer-dim.show { display: block; }
+
+    /* modal → bottom sheet */
+    .modal-overlay { align-items: flex-end; justify-content: center; }
+    .modal { border-radius: 14px 14px 0 0; width: 100%; max-height: 88vh; }
+    .modal-header { padding: 12px 16px; }
+    .modal-header h3 { font-size: 14px; }
+    .modal-body { padding: 14px; }
+    .modal-footer { padding: 12px 16px; gap: 8px; }
+    .modal-footer button { padding: 8px 18px; font-size: 12px; }
+
+    /* search input 모바일 */
+    .search-input-wrap { gap: 8px; margin-bottom: 12px; }
+    .search-input-wrap input { padding: 9px 12px; font-size: 13px; }
+    .search-results { max-height: 280px; }
+
+    /* toc 모바일 */
+    .toc-tree { max-height: 160px; }
+    .new-toc-list { max-height: 220px; }
+
+    /* scrollbar 모바일 */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+
+    /* 컨텍스트 메뉴 모바일에서 숨김 */
+    .ctx-menu { display: none !important; }
+
+    /* 이미지 미리보기 */
+    .img-preview-wrap img { max-height: 55vh; }
+    .img-meta { font-size: 10px; }
+
+    /* drop overlay */
+    .drop-overlay .drop-box { padding: 40px 50px; }
+    .drop-overlay .drop-box p { font-size: 16px; }
   }
 </style>
 </head>
 <body>
 
-<!-- Drop overlay -->
+<!-- ─── Drop overlay ─── -->
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-box">
     <p>📖 EPUB 파일을 여기에 드롭</p>
@@ -431,7 +590,7 @@
   </div>
 </div>
 
-<!-- Search Modal -->
+<!-- ─── Search Modal ─── -->
 <div class="modal-overlay" id="searchModal">
   <div class="modal">
     <div class="modal-header">
@@ -445,7 +604,7 @@
       </div>
       <div class="search-input-wrap" style="margin-top:10px;">
         <input type="text" id="replaceInput" placeholder="바꿀 텍스트를 입력하세요..."/>
-        <button onclick="replaceAllInFiles()" style="padding:10px 20px;background:var(--green);color:white;border:none;border-radius:6px;cursor:pointer;">모두 바꾸기</button>
+        <button onclick="replaceAllInFiles()" style="padding:10px 12px;background:var(--green);color:white;border:none;border-radius:6px;cursor:pointer;align-self:center;white-space:nowrap;font-size:13px;">모두 바꾸기</button>
       </div>
       <div class="search-options">
         <label><input type="checkbox" id="caseSensitive"/> 대소문자 구분</label>
@@ -465,7 +624,7 @@
   </div>
 </div>
 
-<!-- TOC Dialog Modal -->
+<!-- ─── TOC Modal ─── -->
 <div class="modal-overlay" id="tocModal">
   <div class="modal" style="max-width:900px;">
     <div class="modal-header">
@@ -502,24 +661,50 @@
   </div>
 </div>
 
-<!-- Top bar -->
+<!-- ─── PC 컨텍스트 메뉴 ─── -->
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-menu-item" id="ctxOpen">📂 열기</div>
+  <div class="ctx-menu-sep"></div>
+  <div class="ctx-menu-item danger" id="ctxDelete">🗑️ 삭제</div>
+</div>
+
+<!-- ─── Top bar ─── -->
 <div class="topbar">
   <div class="logo">👻 EPUB Editor</div>
   <span class="fname" id="topFname">파일 미열림</span>
   <div class="spacer"></div>
   <button class="theme-toggle" id="btnTheme" title="테마 전환">🌙</button>
+  <!-- invis toggle: PC는 텍스트 포함, 모바일은 아이콘만 -->
   <button class="invis-toggle-btn" id="invisToggleBtn" onclick="toggleInvisMode()" title="제로폭 문자 표시 토글">
-   👀<span class="invis-count" id="invisCount" style="display:none">0</span>
+    👀<span class="invis-count" id="invisCount" style="display:none">0</span>
   </button>
-  <button class="open-btn" id="btnOpen">Open</button>
-  <button id="btnSave" class="primary" disabled>Save</button>
-  <button id="btnReset" class="reset-btn" disabled>Reset</button>
+  <!-- PC 버튼 -->
+  <button class="open-btn pc-only" id="btnOpenPc">Open</button>
+  <button id="btnSavePc" class="primary pc-only" disabled>Save</button>
+  <button id="btnResetPc" class="reset-btn pc-only" disabled>Reset</button>
+  <!-- 모바일 버튼 -->
+  <button class="tb-btn open-btn mb-only" id="btnOpenMb">📖</button>
+  <button id="btnSaveMb" class="tb-btn primary mb-only" disabled title="저장">💾</button>
   <input type="file" id="fileInput" accept=".epub" style="display:none"/>
 </div>
 
-<!-- Layout -->
+<!-- ─── Layout ─── -->
 <div class="layout">
-  <div class="sidebar">
+  <!-- 에디터 영역 -->
+  <div class="main">
+    <div class="editor-tabs" id="editorTabs"></div>
+    <div class="editor-wrap" id="editorWrap">
+      <div class="empty-state">
+        <div class="big-icon">📖</div>
+        <p id="emptyMsg">왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 파일 트리 (PC: sidebar / 모바일: 드로어) -->
+  <div class="sidebar" id="sidebar">
+    <!-- 드로어 핸들 (모바일에서만 보임) -->
+    <div class="drawer-handle" id="drawerHandle" style="display:none;"></div>
     <div class="sidebar-header">
       <span>FILE TREE</span>
       <div class="controls">
@@ -536,19 +721,15 @@
       </div>
     </div>
   </div>
-
-  <div class="main">
-    <div class="editor-tabs" id="editorTabs"></div>
-    <div class="editor-wrap" id="editorWrap">
-      <div class="empty-state">
-        <div class="big-icon">📖</div>
-        <p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
-      </div>
-    </div>
-  </div>
 </div>
 
-<!-- Status bar -->
+<!-- 드로어 딤 배경 (모바일) -->
+<div class="drawer-dim" id="drawerDim" onclick="closeDrawer()"></div>
+
+<!-- FAB (모바일) -->
+<button class="fab-files" id="fabFiles" onclick="toggleDrawer()" style="display:none;">🗂</button>
+
+<!-- ─── Status bar ─── -->
 <div class="statusbar">
   <span id="statusFile">—</span>
   <span id="statusType">—</span>
@@ -559,7 +740,41 @@
 </div>
 
 <script>
-  // ─── STATE ───
+  // ════════════════════════════════════════
+  //  MODE DETECTION
+  // ════════════════════════════════════════
+  let isMobile = false;
+
+  function detectMode() {
+    const prev = isMobile;
+    isMobile = window.innerWidth <= 768;
+    if(prev !== isMobile) applyMode();
+  }
+
+  function applyMode() {
+    const handle = document.getElementById('drawerHandle');
+    const fab = document.getElementById('fabFiles');
+    const emptyMsg = document.getElementById('emptyMsg');
+
+    if(isMobile) {
+      handle.style.display = 'block';
+      fab.style.display = 'flex';
+      emptyMsg.textContent = '버튼을 눌러 EPUB을 열고\n좌하단 버튼으로 파일을 선택하세요';
+      // PC 사이드바가 열려있으면 닫기
+      closeSidebarIfOpen();
+    } else {
+      handle.style.display = 'none';
+      fab.style.display = 'none';
+      emptyMsg.textContent = '왼쪽 파일 트리에서 편집할 파일을 선택하세요';
+      closeDrawer();
+    }
+  }
+
+  window.addEventListener('resize', detectMode);
+
+  // ════════════════════════════════════════
+  //  STATE
+  // ════════════════════════════════════════
   let zip = null;
   let files = {};
   let fileTypes = {};
@@ -579,20 +794,12 @@
 
   // ─── 제로폭/불가시 문자 정의 ───
   const INVIS_CHARS = {
-    '\u2060': 'WJ',
-    '\u2061': 'FA',
-    '\u2062': 'IT',
-    '\u2063': 'IS',
-    '\u2064': 'IP',
-    '\uFEFF': 'BOM',
-    '\u200B': 'ZW',
-    '\u200C': 'ZWNJ',
-    '\u200D': 'ZWJ',
-    '\u00AD': 'SHY',
-    '\u180E': 'MVS',
-    '\u034F': 'CGJ',
+    '\u2060': 'WJ', '\u2061': 'FA', '\u2062': 'IT', '\u2063': 'IS', '\u2064': 'IP',
+    '\uFEFF': 'BOM', '\u200B': 'ZW', '\u200C': 'ZWNJ', '\u200D': 'ZWJ',
+    '\u00AD': 'SHY', '\u180E': 'MVS', '\u034F': 'CGJ',
   };
   const INVIS_REGEX = /[\u2060-\u2064\uFEFF\u200B-\u200D\u00AD\u180E\u034F]/g;
+  const BOOK_TOKEN_REGEX = /(<meta\s[^>]*(?:name|content)\s*=\s*["'][^"']*book-token[^"']*["'][^>]*(?:\/>|>(?:.*?)<\/meta>))/gi;
 
   // ─── DOM ───
   const dropOverlay = document.getElementById('dropOverlay');
@@ -600,12 +807,6 @@
   const editorTabs = document.getElementById('editorTabs');
   const editorWrap = document.getElementById('editorWrap');
   const fileInput = document.getElementById('fileInput');
-  const btnOpen = document.getElementById('btnOpen');
-  const btnSave = document.getElementById('btnSave');
-  const btnReset = document.getElementById('btnReset');
-  const btnTheme = document.getElementById('btnTheme');
-  const btnSearch = document.getElementById('btnSearch');
-  const btnToc = document.getElementById('btnToc');
   const topFname = document.getElementById('topFname');
   const statusFile = document.getElementById('statusFile');
   const statusType = document.getElementById('statusType');
@@ -613,11 +814,58 @@
   const statusTimestamp = document.getElementById('statusTimestamp');
   const statusSize = document.getElementById('statusSize');
 
+  // ─── BUTTON REFS ───
+  const btnOpenPc  = document.getElementById('btnOpenPc');
+  const btnSavePc  = document.getElementById('btnSavePc');
+  const btnResetPc = document.getElementById('btnResetPc');
+  const btnOpenMb  = document.getElementById('btnOpenMb');
+  const btnSaveMb  = document.getElementById('btnSaveMb');
+  const btnSearch  = document.getElementById('btnSearch');
+  const btnToc     = document.getElementById('btnToc');
+
+  function allSaveButtons()  { return [btnSavePc, btnSaveMb]; }
+  function allOpenButtons()  { return [btnOpenPc, btnOpenMb]; }
+
+  function setSaveDisabled(v) { allSaveButtons().forEach(b => b && (b.disabled = v)); }
+  function setControlsDisabled(v) {
+    if(btnResetPc) btnResetPc.disabled = v;
+    btnSearch.disabled = v;
+    btnToc.disabled = v;
+  }
+
+  // ─── DRAWER (모바일) ───
+  const sidebar   = document.getElementById('sidebar');
+  const drawerDim = document.getElementById('drawerDim');
+  const fabFiles  = document.getElementById('fabFiles');
+
+  function toggleDrawer() { sidebar.classList.contains('open') ? closeDrawer() : openDrawer(); }
+  function openDrawer() {
+    sidebar.classList.add('open');
+    drawerDim.classList.add('show');
+    fabFiles.classList.add('drawer-open');
+    fabFiles.textContent = '✕';
+  }
+  function closeDrawer() {
+    sidebar.classList.remove('open');
+    drawerDim.classList.remove('show');
+    fabFiles.classList.remove('drawer-open');
+    fabFiles.textContent = '🗂';
+  }
+  function closeSidebarIfOpen() {
+    if(sidebar.classList.contains('open')) closeDrawer();
+  }
+
+  // 드로어 핸들 스와이프 닫기
+  document.getElementById('drawerHandle').addEventListener('touchstart', e => { window._touchY = e.touches[0].clientY; });
+  document.getElementById('drawerHandle').addEventListener('touchend', e => {
+    if(e.changedTouches[0].clientY - (window._touchY || 0) > 40) closeDrawer();
+  });
+
   // ─── THEME ───
-  btnTheme.addEventListener('click', () => {
+  document.getElementById('btnTheme').addEventListener('click', () => {
     document.documentElement.classList.toggle('dark');
     const isDark = document.documentElement.classList.contains('dark');
-    btnTheme.textContent = isDark ? '🔆' : '🌙';
+    document.getElementById('btnTheme').textContent = isDark ? '🔆' : '🌙';
   });
 
   // ─── DRAG & DROP ───
@@ -627,16 +875,17 @@
   document.body.addEventListener('drop', async e => {
     e.preventDefault(); e.stopPropagation();
     dropOverlay.classList.remove('show');
-    if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if(e.dataTransfer?.files?.length > 0) {
       const file = [...e.dataTransfer.files].find(f => f.name.toLowerCase().endsWith('.epub'));
       if(file) loadEpub(file);
       else alert('EPUB 파일만 업로드 가능합니다');
     }
   });
 
-  btnOpen.addEventListener('click', () => fileInput.click());
+  // ─── OPEN / RESET ───
+  allOpenButtons().forEach(b => b.addEventListener('click', () => fileInput.click()));
   fileInput.addEventListener('change', () => { if(fileInput.files[0]) loadEpub(fileInput.files[0]); });
-  btnReset.addEventListener('click', resetEditor);
+  btnResetPc.addEventListener('click', resetEditor);
 
   function resetEditor() {
     zip = null; files = {}; fileTypes = {}; fileTimestamps = {};
@@ -644,10 +893,10 @@
     tocEntries = []; newTocEntries = []; tocFilePath = null;
     opfPath = null; spine = []; currentFileName = '';
     topFname.textContent = '파일 미열림';
-    btnSave.disabled = true; btnReset.disabled = true; btnSearch.disabled = true; btnToc.disabled = true;
+    setSaveDisabled(true); setControlsDisabled(true);
     fileTree.innerHTML = `<div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">EPUB 파일을 열면<br/>내부 구조가 표시됩니다</div>`;
     editorTabs.innerHTML = '';
-    editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>왼쪽 파일 트리에서 편집할 파일을 선택하세요</p></div>`;
+    editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>${isMobile ? '버튼을 눌러 EPUB을 여세요' : '왼쪽 파일 트리에서 편집할 파일을 선택하세요'}</p></div>`;
     updateStatus();
   }
 
@@ -665,7 +914,6 @@
 
   // ─── LOAD EPUB ───
   async function loadEpub(file) {
-    // 새 파일 열 때 자동 리셋 (invisMode 상태도 초기화)
     invisModeOn = false;
     const zwBtn = document.getElementById('invisToggleBtn');
     if(zwBtn) zwBtn.classList.remove('active');
@@ -694,7 +942,7 @@
     renderFileTree();
     renderTabs();
     topFname.textContent = `${currentFileName} · ${formatBytes(file.size)}`;
-    btnSave.disabled = false; btnReset.disabled = false; btnSearch.disabled = false; btnToc.disabled = false;
+    setSaveDisabled(false); setControlsDisabled(false);
   }
 
   function detectFileType(path) {
@@ -746,14 +994,43 @@
     tocEntries = [];
     const tocDir = path.includes('/') ? path.split('/').slice(0,-1).join('/') + '/' : '';
     if(path.endsWith('.ncx')) {
-      for(const m of content.matchAll(/<navLabel>\s*<text>([^<]+)<\/text>\s*<\/navLabel>\s*<content\s+src="([^"]+)"/gi)) {
+      for(const m of content.matchAll(/<navLabel>\s*<text>([^<]+)<\/text>\s*<\/navLabel>\s*<content\s+src="([^"]+)"/gi))
         tocEntries.push({ label: m[1], content: tocDir + m[2], level: 1 });
-      }
     } else {
-      for(const m of content.matchAll(/<a\s+href="([^"]+)">([^<]+)<\/a>/gi)) {
+      for(const m of content.matchAll(/<a\s+href="([^"]+)">([^<]+)<\/a>/gi))
         tocEntries.push({ label: m[2], content: tocDir + m[1], level: 1 });
-      }
     }
+  }
+
+  // ════════════════════════════════════════
+  //  PC 컨텍스트 메뉴 & 롱프레스 삭제
+  // ════════════════════════════════════════
+  const ctxMenu = document.getElementById('ctxMenu');
+  let ctxTargetPath = null;
+
+  function hideCtxMenu() { ctxMenu.classList.remove('show'); ctxTargetPath = null; }
+
+  document.addEventListener('click', hideCtxMenu);
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') hideCtxMenu(); });
+
+  document.getElementById('ctxOpen').addEventListener('click', () => {
+    if(ctxTargetPath) openFile(ctxTargetPath);
+    hideCtxMenu();
+  });
+  document.getElementById('ctxDelete').addEventListener('click', () => {
+    if(ctxTargetPath) deleteFile(ctxTargetPath);
+    hideCtxMenu();
+  });
+
+  function showCtxMenu(e, path) {
+    e.preventDefault();
+    e.stopPropagation();
+    ctxTargetPath = path;
+    const x = Math.min(e.clientX, window.innerWidth - 160);
+    const y = Math.min(e.clientY, window.innerHeight - 90);
+    ctxMenu.style.left = x + 'px';
+    ctxMenu.style.top  = y + 'px';
+    ctxMenu.classList.add('show');
   }
 
   // ─── RENDER FILE TREE ───
@@ -789,8 +1066,34 @@
     }
 
     fileTree.innerHTML = html;
+    const deletableTypes = ['html','css','image'];
+
     fileTree.querySelectorAll('.file-item').forEach(el => {
-      el.addEventListener('click', () => openFile(el.dataset.path));
+      const path = el.dataset.path;
+      const ftype = fileTypes[path];
+
+      el.addEventListener('click', () => openFile(path));
+
+      if(deletableTypes.includes(ftype)) {
+        // ── 모바일: touchstart 롱프레스 (600ms) ──
+        let pressTimer = null;
+        el.addEventListener('touchstart', () => {
+          pressTimer = setTimeout(() => { pressTimer = null; deleteFile(path); }, 600);
+        }, { passive: true });
+        el.addEventListener('touchend',  () => { if(pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+        el.addEventListener('touchmove', () => { if(pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+
+        // ── PC: 우클릭 & 마우스 롱프레스 (600ms) ──
+        el.addEventListener('contextmenu', e => showCtxMenu(e, path));
+
+        let mouseTimer = null;
+        el.addEventListener('mousedown', e => {
+          if(e.button !== 0) return; // 좌클릭만
+          mouseTimer = setTimeout(() => { mouseTimer = null; showCtxMenu(e, path); }, 600);
+        });
+        el.addEventListener('mouseup',   () => { if(mouseTimer) { clearTimeout(mouseTimer); mouseTimer = null; } });
+        el.addEventListener('mouseleave',() => { if(mouseTimer) { clearTimeout(mouseTimer); mouseTimer = null; } });
+      }
     });
   }
 
@@ -799,13 +1102,13 @@
     const name = f.path.split('/').pop();
     const ts = fileTimestamps[f.path];
     const timestamp = ts ? formatTimestamp(ts) : '';
-    const isActive = activeTab === f.path;
+    const isActive  = activeTab === f.path;
     const isModified = modifiedFiles.has(f.path);
     let classes = 'file-item';
-    if(isActive) classes += ' active';
+    if(isActive)   classes += ' active';
     if(isModified) classes += ' modified';
-    let spineHtml = spineIndex ? `<span class="spine-num">${spineIndex}</span>` : '';
-    let modIcon = isModified ? '🔴 ' : '';
+    const spineHtml = spineIndex ? `<span class="spine-num">${spineIndex}</span>` : '';
+    const modIcon   = isModified ? '🔴 ' : '';
     return `<div class="${classes}" data-path="${f.path}">
       ${spineHtml}<span class="icon">${modIcon}${icon}</span>
       <span class="file-name">${name}</span>
@@ -818,14 +1121,51 @@
     return icons[type] || '📄';
   }
 
+  // ─── DELETE FILE ───
+  function deleteFile(path) {
+    const name = path.split('/').pop();
+    if(!confirm(`"${name}" 파일을 삭제하시겠습니까?\n(저장 시 EPUB에서 제거됩니다)`)) return;
+
+    if(zip && zip.files[path]) zip.remove(path);
+
+    if(opfPath && files[opfPath]) {
+      const opfDir = opfPath.includes('/') ? opfPath.split('/').slice(0,-1).join('/') + '/' : '';
+      const relPath = path.startsWith(opfDir) ? path.slice(opfDir.length) : path;
+      let opf = files[opfPath];
+      const itemIds = [];
+      opf = opf.replace(/<item\s[^>]*href\s*=\s*["'][^"']*["'][^>]*\/>/gi, m => {
+        const hrefMatch = m.match(/href\s*=\s*["']([^"']+)["']/i);
+        const idMatch   = m.match(/\bid\s*=\s*["']([^"']+)["']/i);
+        if(hrefMatch && (hrefMatch[1] === relPath || hrefMatch[1].replace(/^.*\//,'') === name)) {
+          if(idMatch) itemIds.push(idMatch[1]);
+          return '';
+        }
+        return m;
+      });
+      itemIds.forEach(id => {
+        opf = opf.replace(new RegExp(`<itemref\\s[^>]*idref\\s*=\\s*["']${id}["'][^>]*\/>`,'gi'), '');
+      });
+      files[opfPath] = opf;
+      modifiedFiles.add(opfPath);
+    }
+
+    delete files[path];
+    delete fileTypes[path];
+    delete fileTimestamps[path];
+    modifiedFiles.delete(path);
+    spine = spine.filter(p => p !== path);
+    closeTab(path);
+    renderFileTree();
+  }
+
   // ─── TABS ───
   function renderTabs() {
     editorTabs.innerHTML = openTabs.map(tab => {
       const name = tab.path.split('/').pop();
-      const isActive = tab.path === activeTab;
+      const isActive   = tab.path === activeTab;
       const isModified = modifiedFiles.has(tab.path);
       let classes = 'tab';
-      if(isActive) classes += ' active';
+      if(isActive)   classes += ' active';
       if(isModified) classes += ' modified';
       return `<div class="${classes}" data-path="${tab.path}">
         <span class="tab-name">${name}</span>
@@ -851,6 +1191,7 @@
   function openFile(path) {
     if(!openTabs.find(t => t.path === path)) openTabs.push({ path });
     activeTab = path;
+    if(isMobile) closeDrawer();
     renderTabs(); renderEditor(); renderFileTree(); updateStatus();
   }
 
@@ -863,11 +1204,8 @@
     else editorWrap.innerHTML = `<div class="empty-state"><p>바이너리 파일은 편집할 수 없습니다</p></div>`;
   }
 
-  // ─── 제로폭 문자 하이라이트 오버레이 ───
-  function countInvisChars(text) {
-    const matches = text.match(INVIS_REGEX);
-    return matches ? matches.length : 0;
-  }
+  // ─── 제로폭 오버레이 ───
+  function countInvisChars(text) { const m = text.match(INVIS_REGEX); return m ? m.length : 0; }
   function countBookTokens(text) {
     BOOK_TOKEN_REGEX.lastIndex = 0;
     const m = text.match(BOOK_TOKEN_REGEX);
@@ -875,99 +1213,69 @@
   }
   function updateButtonState(text) {
     const btn = document.getElementById('invisToggleBtn');
-    const el = document.getElementById('invisCount');
+    const el  = document.getElementById('invisCount');
     if(!btn || !el) return;
     const zwCount = countInvisChars(text);
     const tkCount = countBookTokens(text);
     if(zwCount > 0) {
-      el.textContent = zwCount;
-      el.style.display = 'inline';
-      el.classList.remove('token-count');
-      btn.classList.remove('has-token');
+      el.textContent = zwCount; el.style.display = 'inline';
+      el.classList.remove('token-count'); btn.classList.remove('has-token');
     } else if(tkCount > 0) {
-      el.textContent = tkCount;
-      el.style.display = 'inline';
-      el.classList.add('token-count');
-      btn.classList.add('has-token');
+      el.textContent = tkCount; el.style.display = 'inline';
+      el.classList.add('token-count'); btn.classList.add('has-token');
     } else {
       el.style.display = 'none';
-      el.classList.remove('token-count');
-      btn.classList.remove('has-token');
+      el.classList.remove('token-count'); btn.classList.remove('has-token');
     }
-  } 
+  }
 
-  // ─── 수정됨: 일반 텍스트도 오버레이에 그대로 출력 ───
-  // book-token 감지 정규식
-  const BOOK_TOKEN_REGEX = /(<meta\s[^>]*(?:name|content)\s*=\s*["'][^"']*book-token[^"']*["'][^>]*(?:\/>|>(?:.*?)<\/meta>))/gi;
- 
   function buildOverlayHtml(text) {
-    // 1단계: book-token 태그를 플레이스홀더로 마킹
     const tokenRanges = [];
     let m;
     BOOK_TOKEN_REGEX.lastIndex = 0;
-    while((m = BOOK_TOKEN_REGEX.exec(text)) !== null) {
+    while((m = BOOK_TOKEN_REGEX.exec(text)) !== null)
       tokenRanges.push({ start: m.index, end: m.index + m[0].length, raw: m[0] });
-    }
- 
+
     let result = '';
     for(let i = 0; i < text.length; i++) {
-      // book-token 범위 시작인지 확인
       const range = tokenRanges.find(r => r.start === i);
       if(range) {
-        // 범위 전체를 노란 하이라이트로 감싸서 출력
         let inner = '';
         for(let j = 0; j < range.raw.length; j++) {
           const c = range.raw[j];
-          if(c === '&') inner += '&amp;';
-          else if(c === '<') inner += '&lt;';
-          else if(c === '>') inner += '&gt;';
-          else inner += c;
+          if(c === '&') inner += '&amp;'; else if(c === '<') inner += '&lt;'; else if(c === '>') inner += '&gt;'; else inner += c;
         }
         result += `<span class="token-highlight" title="⚠️ book-token 감지">${inner}</span>`;
         i += range.raw.length - 1;
         continue;
       }
- 
       const ch = text[i];
       if(INVIS_CHARS[ch]) {
         const label = INVIS_CHARS[ch];
         const code = ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0');
         result += `<span class="invis-badge" title="U+${code} ${label}">${label}</span>`;
-      } else if(ch === '&') {
-        result += '&amp;';
-      } else if(ch === '<') {
-        result += '&lt;';
-      } else if(ch === '>') {
-        result += '&gt;';
-      } else {
-        result += ch;
-      }
+      } else if(ch === '&') result += '&amp;';
+      else if(ch === '<') result += '&lt;';
+      else if(ch === '>') result += '&gt;';
+      else result += ch;
     }
     return result;
   }
- 
+
   function updateOverlay() {
-    const editor = document.getElementById('codeEditor');
+    const editor  = document.getElementById('codeEditor');
     const overlay = document.getElementById('invisOverlay');
     if(!editor || !overlay) return;
- 
-    if(!invisModeOn) {
-      overlay.classList.add('hidden');
-      updateInvisCount(0, false);
-      return;
-    }
- 
+    if(!invisModeOn) { overlay.classList.add('hidden'); updateInvisCount(0, false); return; }
     const content = editor.value;
-    const count = countInvisChars(content);
+    const count   = countInvisChars(content);
     overlay.innerHTML = buildOverlayHtml(content);
     overlay.classList.remove('hidden');
- 
-    overlay.scrollTop = editor.scrollTop;
+    overlay.scrollTop  = editor.scrollTop;
     overlay.scrollLeft = editor.scrollLeft;
- 
     updateInvisCount(count, true);
   }
- 
+
   function updateInvisCount(count, show) {
     const el = document.getElementById('invisCount');
     if(!el) return;
@@ -975,25 +1283,16 @@
     el.style.display = (show && count > 0) ? 'inline' : 'none';
   }
 
-  // ─── 수정됨: textarea를 visibility:hidden으로 숨기고 오버레이로 본문 표시 ───
   function toggleInvisMode() {
     invisModeOn = !invisModeOn;
     const btn = document.getElementById('invisToggleBtn');
     btn.classList.toggle('active', invisModeOn);
-
     const editor = document.getElementById('codeEditor');
     if(editor) {
-      if(invisModeOn) {
-        editor.style.color = 'transparent';
-        editor.style.caretColor = 'var(--text)'
-      } else {
-        editor.style.color = '';
-        editor.style.caretColor = '';
-      }
+      editor.style.color      = invisModeOn ? 'transparent' : '';
+      editor.style.caretColor = invisModeOn ? 'var(--text)' : '';
       updateOverlay();
-    } else {
-      updateInvisCount(0, false);
-    }
+    } else { updateInvisCount(0, false); }
   }
 
   function renderTextEditor() {
@@ -1004,44 +1303,31 @@
         <div class="invis-overlay hidden" id="invisOverlay" aria-hidden="true"></div>
       </div>`;
 
-    const editor = document.getElementById('codeEditor');
+    const editor  = document.getElementById('codeEditor');
     const overlay = document.getElementById('invisOverlay');
 
     editor.addEventListener('scroll', () => {
-      if(overlay) {
-        overlay.scrollTop = editor.scrollTop;
-        overlay.scrollLeft = editor.scrollLeft;
-      }
+      if(overlay) { overlay.scrollTop = editor.scrollTop; overlay.scrollLeft = editor.scrollLeft; }
     });
-
     editor.addEventListener('input', () => {
       files[activeTab] = editor.value;
-      if(!modifiedFiles.has(activeTab)) {
-        modifiedFiles.add(activeTab);
-        renderTabs(); renderFileTree(); updateStatus();
-      }
+      if(!modifiedFiles.has(activeTab)) { modifiedFiles.add(activeTab); renderTabs(); renderFileTree(); updateStatus(); }
       if(invisModeOn) updateOverlay();
     });
-
     editor.addEventListener('keydown', e => {
       if(e.key === 'Tab') {
         e.preventDefault();
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
-        editor.selectionStart = editor.selectionEnd = start + 2;
+        const s = editor.selectionStart, en = editor.selectionEnd;
+        editor.value = editor.value.substring(0, s) + '  ' + editor.value.substring(en);
+        editor.selectionStart = editor.selectionEnd = s + 2;
         if(invisModeOn) updateOverlay();
       }
     });
 
-    // ─── 수정됨: ZW 모드 켜져 있으면 visibility hidden 적용 ───
     if(invisModeOn) {
-      editor.style.color = 'transparent';
-      editor.style.caretColor = 'var(--text)';
+      editor.style.color = 'transparent'; editor.style.caretColor = 'var(--text)';
       updateOverlay();
-    } else {
-    updateButtonState(content);
-    }
+    } else { updateButtonState(content); }
   }
 
   function renderImagePreview() {
@@ -1053,16 +1339,21 @@
     if(data instanceof Uint8Array) { const blob = new Blob([data], {type: mime}); src = URL.createObjectURL(blob); }
     else { src = 'data:' + mime + ';base64,' + btoa(data); }
     const sizeStr = data instanceof Uint8Array ? formatBytes(data.byteLength) : formatBytes(data.length);
+    const safePath = activeTab.replace(/'/g, "\\'");
+    const safeFname = activeTab.split('/').pop().replace(/'/g, "\\'");
     editorWrap.innerHTML = `
       <div class="img-preview-wrap">
         <img src="${src}" alt="preview" onload="updateImageDimensions(this)"/>
         <div class="img-meta" id="imgMeta">${activeTab} · ${sizeStr} · ${ext.toUpperCase()}</div>
         <div class="img-actions">
           <button onclick="replaceImage()">교체</button>
-          <button onclick="downloadImage('${src}','${activeTab.split('/').pop()}')">다운로드</button>
+          <button onclick="downloadImage('${src}','${safeFname}')">다운로드</button>
+          <button class="danger" onclick="deleteFileConfirm('${safePath}')">🗑️ 삭제</button>
         </div>
       </div>`;
   }
+
+  function deleteFileConfirm(path) { deleteFile(path); }
 
   function updateImageDimensions(img) {
     const meta = document.getElementById('imgMeta');
@@ -1073,10 +1364,8 @@
     const input = document.createElement('input');
     input.type = 'file'; input.accept = 'image/*';
     input.onchange = async () => {
-      const file = input.files[0];
-      if(!file) return;
-      const arrayBuffer = await file.arrayBuffer();
-      files[activeTab] = new Uint8Array(arrayBuffer);
+      const file = input.files[0]; if(!file) return;
+      files[activeTab] = new Uint8Array(await file.arrayBuffer());
       modifiedFiles.add(activeTab);
       renderEditor(); renderTabs(); renderFileTree(); updateStatus();
     };
@@ -1087,10 +1376,10 @@
     const a = document.createElement('a'); a.href = src; a.download = fname; a.click();
   }
 
-  // ─── SAVE (v1.2.3: DEFLATE 압축 적용, mimetype은 STORE 유지) ───
-  btnSave.addEventListener('click', async () => {
+  // ─── SAVE ───
+  async function doSave() {
     if(!zip) return;
-    const mimetimeTime = (zip.files['mimetype'] && zip.files['mimetype'].date) ? zip.files['mimetype'].date : new Date();
+    const mimetimeTime = (zip.files['mimetype']?.date) ? zip.files['mimetype'].date : new Date();
 
     for(const path in files) {
       const options = {};
@@ -1107,37 +1396,32 @@
     Object.keys(zip.files).forEach(path => { if(zip.files[path].dir) zip.files[path].date = mimetimeTime; });
     if(zip.files['mimetype']) zip.files['mimetype'].date = mimetimeTime;
 
-    const blob = await zip.generateAsync({
-      type: 'blob',
-      mimeType: 'application/epub+zip',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 6 }
-    });
-
+    const blob = await zip.generateAsync({ type:'blob', mimeType:'application/epub+zip', compression:'DEFLATE', compressionOptions:{ level:6 } });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = currentFileName; a.click();
     URL.revokeObjectURL(url);
     modifiedFiles.forEach(path => { fileTimestamps[path] = new Date(); });
     modifiedFiles.clear();
     renderTabs(); renderFileTree(); updateStatus();
-  });
+  }
+
+  btnSavePc.addEventListener('click', doSave);
+  btnSaveMb.addEventListener('click', doSave);
 
   // ─── SEARCH ───
-  function openSearchModal() { document.getElementById('searchModal').classList.add('show'); document.getElementById('searchInput').focus(); }
+  function openSearchModal()  { document.getElementById('searchModal').classList.add('show'); document.getElementById('searchInput').focus(); }
   function closeSearchModal() { document.getElementById('searchModal').classList.remove('show'); renderFileTree(); renderTabs(); updateStatus(); }
 
-  let searchFilter = 'all'; // 'all' | 'html' | 'css'
-
+  let searchFilter = 'all';
   function setSearchFilter(f) {
     searchFilter = f;
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
   }
-
   function matchesFilter(path) {
     const lower = path.toLowerCase();
     if(searchFilter === 'html') return /\.(html|xhtml|xml|xhml|htm)$/.test(lower);
-    if(searchFilter === 'css') return lower.endsWith('.css');
-    return true; // 전체
+    if(searchFilter === 'css')  return lower.endsWith('.css');
+    return true;
   }
 
   function performSearch() {
@@ -1146,8 +1430,7 @@
     const caseSensitive = document.getElementById('caseSensitive').checked;
     const results = [];
     for(const [path, content] of Object.entries(files)) {
-      if(typeof content !== 'string') continue;
-      if(!matchesFilter(path)) continue;
+      if(typeof content !== 'string' || !matchesFilter(path)) continue;
       const lines = content.split('\n');
       lines.forEach((line, idx) => {
         const sl = caseSensitive ? line : line.toLowerCase();
@@ -1165,8 +1448,7 @@
   }
 
   function openFileAtLine(path, lineNum) {
-    closeSearchModal();
-    openFile(path);
+    closeSearchModal(); openFile(path);
     setTimeout(() => {
       const editor = document.getElementById('codeEditor');
       if(editor) {
@@ -1183,6 +1465,38 @@
   document.addEventListener('keydown', e => {
     if((e.ctrlKey || e.metaKey) && e.key === 'f' && Object.keys(files).length) { e.preventDefault(); openSearchModal(); }
   });
+
+  function replaceAllInFiles() {
+    const searchText  = document.getElementById('searchInput').value;
+    const replaceText = document.getElementById('replaceInput').value;
+    if(!searchText) { alert('찾을 텍스트를 입력하세요'); return; }
+    const caseSensitive = document.getElementById('caseSensitive').checked;
+    if(!confirm(`"${searchText}"를 "${replaceText}"로 모두 바꾸시겠습니까?`)) return;
+
+    let totalCount = 0, fileCount = 0;
+    Object.keys(files).forEach(path => {
+      if(!matchesFilter(path) || typeof files[path] !== 'string') return;
+      let content = files[path]; let count = 0;
+      if(caseSensitive) {
+        const parts = content.split(searchText); count = parts.length - 1;
+        if(count > 0) files[path] = parts.join(replaceText);
+      } else {
+        const regex = new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        const newContent = content.replace(regex, () => { count++; return replaceText; });
+        if(count > 0) files[path] = newContent;
+      }
+      if(count > 0) { totalCount += count; fileCount++; modifiedFiles.add(path); }
+    });
+
+    if(totalCount > 0) {
+      alert(`${fileCount}개 파일에서 ${totalCount}개 항목을 바꿨습니다`);
+      if(activeTab && files[activeTab]) {
+        const textarea = document.getElementById('codeEditor');
+        if(textarea) { textarea.value = files[activeTab]; if(invisModeOn) updateOverlay(); }
+      }
+      renderFileTree(); renderTabs(); updateStatus(); performSearch();
+    } else { alert(`"${searchText}"를 찾을 수 없습니다`); }
+  }
 
   // ─── TOC ───
   function openTocModal() {
@@ -1212,7 +1526,7 @@
     const levelIcons = ['📕','📙','📒','📗','📘','📓'];
     container.innerHTML = newTocEntries.map((e, idx) => {
       const level = e.level || 1;
-      const indent = '  '.repeat(level - 1);
+      const indent   = '  '.repeat(level - 1);
       const selected = idx === selectedNewTocIndex ? ' selected' : '';
       return `<div class="new-toc-item${selected}" data-idx="${idx}" draggable="true">
         <span>${indent}${levelIcons[Math.min(level-1,5)]}</span>
@@ -1225,12 +1539,12 @@
     container.querySelectorAll('.new-toc-item').forEach(el => {
       el.addEventListener('click', () => { selectedNewTocIndex = parseInt(el.dataset.idx); renderNewTocList(); });
       el.addEventListener('dragstart', e => { el.classList.add('dragging'); e.dataTransfer.setData('text/plain', el.dataset.idx); });
-      el.addEventListener('dragend', () => el.classList.remove('dragging'));
-      el.addEventListener('dragover', e => e.preventDefault());
+      el.addEventListener('dragend',   () => el.classList.remove('dragging'));
+      el.addEventListener('dragover',  e => e.preventDefault());
       el.addEventListener('drop', e => {
         e.preventDefault();
         const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
-        const toIdx = parseInt(el.dataset.idx);
+        const toIdx   = parseInt(el.dataset.idx);
         if(fromIdx !== toIdx) { const item = newTocEntries.splice(fromIdx, 1)[0]; newTocEntries.splice(toIdx, 0, item); selectedNewTocIndex = toIdx; renderNewTocList(); }
       });
     });
@@ -1252,7 +1566,7 @@
       let match;
       while((match = headingRegex.exec(content)) !== null) {
         const level = parseInt(match[1][1]);
-        const text = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        const text  = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
         if(text) newTocEntries.push({ label: text, content: filePath, level });
       }
       const classRegex = /<(\w+)\s+[^>]*class=["'][^"']*?(title|toc|chapter)[^"']*?["'][^>]*>(.*?)<\/\1>/gi;
@@ -1391,45 +1705,8 @@
     files[tocFilePath] = original.slice(0, olStart) + newOl + original.slice(olEnd);
   }
 
-  // ─── REPLACE ALL ───
-  function replaceAllInFiles() {
-    const searchText = document.getElementById('searchInput').value;
-    const replaceText = document.getElementById('replaceInput').value;
-    if(!searchText) { alert('찾을 텍스트를 입력하세요'); return; }
-    const caseSensitive = document.getElementById('caseSensitive').checked;
-    if(!confirm(`"${searchText}"를 "${replaceText}"로 모두 바꾸시겠습니까?`)) return;
-
-    let totalCount = 0, fileCount = 0;
-    Object.keys(files).forEach(path => {
-      if(!matchesFilter(path)) return;
-      if(typeof files[path] !== 'string') return;
-      let content = files[path]; let count = 0;
-      if(caseSensitive) {
-        const parts = content.split(searchText); count = parts.length - 1;
-        if(count > 0) files[path] = parts.join(replaceText);
-      } else {
-        const escapedText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedText, 'gi');
-        const newContent = content.replace(regex, () => { count++; return replaceText; });
-        if(count > 0) files[path] = newContent;
-      }
-      if(count > 0) { totalCount += count; fileCount++; modifiedFiles.add(path); }
-    });
-
-    if(totalCount > 0) {
-      alert(`${fileCount}개 파일에서 ${totalCount}개 항목을 바꿨습니다`);
-      if(activeTab && files[activeTab]) {
-        const textarea = document.getElementById('codeEditor');
-        if(textarea) { textarea.value = files[activeTab]; if(invisModeOn) updateOverlay(); }
-      }
-      renderFileTree(); renderTabs(); updateStatus(); performSearch();
-    } else {
-      alert(`"${searchText}"를 찾을 수 없습니다`);
-    }
-  }
-
   // ─── UTILS ───
-  function getExt(path) { const parts = path.split('.'); return parts.length > 1 ? parts[parts.length-1] : ''; }
+  function getExt(path) { const p = path.split('.'); return p.length > 1 ? p[p.length-1] : ''; }
   function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function formatBytes(b) { if(b < 1024) return b + ' B'; if(b < 1024*1024) return (b/1024).toFixed(1) + ' KB'; return (b/(1024*1024)).toFixed(2) + ' MB'; }
   function formatTimestamp(d) { if(!d) return ''; const pad = n => String(n).padStart(2,'0'); return `${String(d.getFullYear()).slice(2)}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
@@ -1446,6 +1723,19 @@
       statusSize.textContent = formatBytes(d instanceof Uint8Array ? d.byteLength : new Blob([d]).size);
     } else { statusSize.textContent = '—'; }
   }
+
+  // ─── INIT ───
+  detectMode();
+
+  // layout 높이를 JS로도 보정
+  function fixLayoutHeight() {
+    const topH    = document.querySelector('.topbar').offsetHeight;
+    const statH   = document.querySelector('.statusbar').offsetHeight;
+    document.querySelector('.layout').style.height = `calc(100dvh - ${topH}px - ${statH}px)`;
+    document.body.style.height = '100dvh';
+  }
+  window.addEventListener('resize', fixLayoutHeight);
+  fixLayoutHeight();
 </script>
 </body>
 </html>
