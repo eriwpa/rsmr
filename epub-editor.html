@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor v1.3.0</title>
+<title>EPUB Editor v1.3.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
@@ -242,8 +242,32 @@
   .editor-container {
     flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column;
   }
+  .editor-inner {
+    flex: 1; display: flex; overflow: hidden; position: relative;
+  }
+  .line-numbers {
+    flex-shrink: 0;
+    background: var(--bg3);
+    border-right: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--font-code);
+    font-size: 10px;
+    line-height: 1.7;
+    padding: 16px 7px 16px 4px;
+    text-align: right;
+    overflow: hidden;
+    user-select: none;
+    white-space: pre;
+    min-width: 38px;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .line-numbers.txt-mode {
+    font-size: 10px;
+    line-height: 1.8;
+  }
   .code-editor {
-    flex: 1; width: 100%;
+    flex: 1;
     background: var(--bg); color: var(--text);
     font-family: var(--font-code);
     font-size: 13px; line-height: 1.7;
@@ -251,6 +275,55 @@
     resize: none; border: none; outline: none;
     overflow: auto; tab-size: 2;
     position: relative; z-index: 2;
+    white-space: pre;   /* 줄바꿈 방지 → 줄번호 정확도 보장 */
+  }
+  /* TXT 모드: 줄바꿈 허용 + 줄번호 숨김 (wrap되면 번호가 어긋나므로) */
+  .code-editor.txt-mode {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .line-numbers.txt-mode-hidden {
+    display: none;
+  }
+
+  /* TXT 전용 contenteditable 에디터 */
+  .txt-editor-wrap {
+    flex: 1; display: flex; overflow: hidden;
+  }
+  .txt-line-numbers {
+    flex-shrink: 0;
+    background: var(--bg3);
+    border-right: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--font-code);
+    font-size: 10px;
+    line-height: 1;
+    padding: 16px 7px 16px 4px;
+    text-align: right;
+    overflow: hidden;
+    user-select: none;
+    min-width: 38px;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .txt-line-numbers span {
+    display: block;
+  }
+  .txt-content-wrap {
+    flex: 1; overflow: auto; position: relative;
+  }
+  .txt-editor {
+    min-height: 100%;
+    padding: 16px 20px;
+    font-family: var(--font-code);
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    outline: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+    tab-size: 2;
+    caret-color: var(--text);
   }
   .code-editor::selection { background: rgba(124,106,255,0.25); }
 
@@ -519,6 +592,8 @@
     /* code editor 모바일 */
     .code-editor { font-size: 12px; line-height: 1.65; padding: 10px 12px; }
     .invis-overlay { font-size: 12px; line-height: 1.65; padding: 10px 12px; }
+    .line-numbers { font-size: 9px; line-height: 1.65; padding: 10px 6px 10px 4px; min-width: 32px; }
+    .line-numbers.txt-mode { font-size: 9px; line-height: 1.75; }
 
     /* status bar 모바일 */
     .statusbar { height: 22px; padding: 0 10px; gap: 10px; font-size: 9px; }
@@ -589,8 +664,8 @@
 <!-- ─── Drop overlay ─── -->
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-box">
-    <p>📖 EPUB 파일을 여기에 드롭</p>
-    <p class="sub">.epub 파일만 가능</p>
+    <p>📖 파일을 여기에 드롭</p>
+    <p class="sub">.epub / .txt 파일 지원</p>
   </div>
 </div>
 
@@ -675,7 +750,7 @@
 <!-- ─── Top bar ─── -->
 <div class="topbar">
   <div class="logo">👻 EP_Editor</div>
-  <span class="fname" id="topFname">EPUB  미열람</span>
+  <span class="fname" id="topFname">EPUB / TXT 미열람</span>
   <div class="spacer"></div>
   <button class="theme-toggle" id="btnTheme" title="테마 전환">🌙</button>
   <!-- invis toggle: PC는 텍스트 포함, 모바일은 아이콘만 -->
@@ -688,7 +763,7 @@
   <!-- 모바일 버튼 -->
   <button class="tb-btn open-btn mb-only" id="btnOpenMb">📖</button>
   <button id="btnSaveMb" class="tb-btn primary mb-only" disabled title="저장">💾</button>
-  <input type="file" id="fileInput" accept=".epub" style="display:none"/>
+  <input type="file" id="fileInput" accept=".epub,.txt" style="display:none"/>
 </div>
 
 <!-- ─── Layout ─── -->
@@ -795,6 +870,11 @@
   let currentFileName = '';
   let invisModeOn = false;
 
+  // TXT 모드 전용
+  let isTxtMode = false;
+  let txtChapters = [];   // [{title, startLine, endLine}, ...]
+  let txtContent  = '';   // 전체 원문
+
   // ─── 제로폭/불가시 문자 정의 ───
   const INVIS_CHARS = {
     '\u2060': 'WJ', '\u2061': 'FA', '\u2062': 'IT', '\u2063': 'IS', '\u2064': 'IP',
@@ -879,15 +959,23 @@
     e.preventDefault(); e.stopPropagation();
     dropOverlay.classList.remove('show');
     if(e.dataTransfer?.files?.length > 0) {
-      const file = [...e.dataTransfer.files].find(f => f.name.toLowerCase().endsWith('.epub'));
-      if(file) loadEpub(file);
-      else alert('EPUB 파일만 업로드 가능합니다');
+      const file = [...e.dataTransfer.files].find(f => f.name.toLowerCase().endsWith('.epub') || f.name.toLowerCase().endsWith('.txt'));
+      if(file) {
+        if(file.name.toLowerCase().endsWith('.txt')) loadTxt(file);
+        else loadEpub(file);
+      }
+      else alert('EPUB 또는 TXT 파일만 업로드 가능합니다');
     }
   });
 
   // ─── OPEN / RESET ───
   allOpenButtons().forEach(b => b.addEventListener('click', () => fileInput.click()));
-  fileInput.addEventListener('change', () => { if(fileInput.files[0]) loadEpub(fileInput.files[0]); });
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files[0];
+    if(!f) return;
+    if(f.name.toLowerCase().endsWith('.txt')) loadTxt(f);
+    else loadEpub(f);
+  });
   btnResetPc.addEventListener('click', resetEditor);
 
   function resetEditor() {
@@ -895,12 +983,217 @@
     openTabs = []; activeTab = null; modifiedFiles.clear();
     tocEntries = []; newTocEntries = []; tocFilePath = null;
     opfPath = null; spine = []; currentFileName = '';
-    topFname.textContent = 'EPUB 미열람';
+    isTxtMode = false; txtChapters = []; txtContent = '';
+    topFname.textContent = 'EPUB / TXT 미열람';
+    const sidebarHeaderSpan = document.querySelector('.sidebar-header > span');
+    if(sidebarHeaderSpan) sidebarHeaderSpan.textContent = 'FILE TREE';
     setSaveDisabled(true); setControlsDisabled(true);
     fileTree.innerHTML = `<div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">EPUB 파일을 열면<br/>내부 구조가 표시됩니다</div>`;
     editorTabs.innerHTML = '';
     editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>${isMobile ? '버튼을 눌러 EPUB을 여세요' : '왼쪽 파일 트리에서 편집할 파일을 선택하세요'}</p></div>`;
     updateStatus();
+  }
+
+  // ════════════════════════════════════════
+  //  TXT MODE
+  // ════════════════════════════════════════
+  async function loadTxt(file) {
+    invisModeOn = false;
+    const zwBtn = document.getElementById('invisToggleBtn');
+    if(zwBtn) zwBtn.classList.remove('active');
+    resetEditor();
+
+    const rawText = await file.text();
+    txtContent = rawText;
+    isTxtMode = true;
+    currentFileName = file.name;
+
+    // 파일명에서 제목 추출 (확장자 제거)
+    const cleanTitle = file.name.replace(/\.txt$/i, '').replace(/[_\-]/g,' ').trim();
+
+    // 챕터 파싱
+    txtChapters = parseTxtChapters(rawText, cleanTitle);
+
+    // 가상 파일 등록 (에디터 열기용)
+    const TXT_KEY = '__txt__/' + file.name;
+    files[TXT_KEY] = rawText;
+    fileTypes[TXT_KEY] = 'txt-main';
+    fileTimestamps[TXT_KEY] = new Date(file.lastModified);
+
+    topFname.textContent = `${currentFileName} · ${formatBytes(file.size)} · TXT`;
+    setSaveDisabled(false);
+    // 검색 버튼만 활성화 (TOC 버튼은 TXT에서 불필요)
+    btnSearch.disabled = false;
+
+    renderTxtTree();
+    openFile(TXT_KEY);
+  }
+
+  function parseTxtChapters(text, cleanTitle) {
+    // 불가시 공백만 정규화 (줄 압축 금지 — 압축하면 startLine이 에디터와 어긋남)
+    text = text.replace(/[\u2000-\u200B\u3000\uFEFF]/g, ' ');
+    const lines = text.split('\n');
+
+    // 파일 전체에 "n화" 패턴 존재 여부 미리 체크
+    const hasHwaInFile = lines.some(line =>
+      /^제?\s*\d+\s*화(?:\s*\(?\s*(?:완결|완|마침|完|fin|Complete)\s*\)?)?(?:[\.\s].*)?$/.test(line.trim())
+    );
+
+    const escapedTitle = cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const CHAPTER_RE = new RegExp(
+      '^(' +
+        escapedTitle + ' .*|' +
+        '제?\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\\s*화(?:\\s*\\(?\\s*(?:완결|완|Complete)\\s*\\)?)?(?:[.\\s].*)?|' +
+        '[^\\w\\s]{1,3}\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\\s*화(?:\\s*\\(?\\s*(?:완결|완|Complete)\\s*\\)?)?(?:[.\\s].*)?|' +
+        '(?:제|第)?\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\\s*(?:장|章)(?:[.\\s].*)?|' +
+        '.*외전(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+(?:-[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?)?(?:\\s*화)?(?:[.\\s].*)?|' +
+        '[^\\w\\s]*(?:프롤로그|[Pp]rologue)(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:\\s*화)?(?:[.\\s].*)?|' +
+        '[^\\w\\s]*(?:에필로그|[Ee]pilogue)(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:\\s*화)?(?:[.\\s].*)?|' +
+        '(?:서장|序章|[Ii]ntroduction)(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:[.\\s].*)?|' +
+        '(?:종장|終章|[Ff]inal\\s*[Cc]hapter)(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:[.\\s].*)?|' +
+        '(?:후일담|後日譚|[Ss]ide\\s*[Ss]tory|[Ss]tory)(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:[.\\s].*)?|' +
+        '(?:번외|番外|[Ee]xtra)(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:[.\\s].*)?|' +
+        '(?:[<〈【])?작가\\s*후기(?:[>〉】])?(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:[.\\s].*)?|' +
+        '[^\\w\\s]*(?:[Cc]hapter)(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:\\s*화)?(?:[.\\s].*)?|' +
+        '[^\\w\\s]*(?:[Ee]pisode)(?:\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:\\s*화)?(?:[.\\s].*)?|' +
+        '[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+(?:-[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?\\. (?:.*)?|' +
+        '-\\s*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\\s*-|' +
+        '^\\s*#.*|' +
+        '^【[^】]+】' +
+      ')\\s*$',
+      'i'
+    );
+
+    const ENDING_RE = /^-?\s*.{0,15}(?:完|마침|[Ff]in\.?|완결)\s*-?$/i;
+    const H2_RE = new RegExp(
+      '^(' +
+        '[^\\d]*[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\\s*화(?:\\s*\\(?\\s*(?:완결|완|Complete)\\s*\\)?)?(?:[.\\s].*)?|' +
+        '.*외전(?:[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ\\s]*(?:화|권)?)?(?:[.\\s].*)?|' +
+        '[^\\w\\s]*(?:프롤로그|[Pp]rologue|에필로그|[Ee]pilogue|[Ee]pisode|후일담|번외|서장|종장).*' +
+      ')\\s*$',
+      'i'
+    );
+
+    const chapters = [];
+    let currentTitles = [];
+    let startLine = 0;
+    let pendingStartLine = 0;
+
+    const flush = (endLine) => {
+      if(currentTitles.length > 0) {
+        chapters.push({
+          title: currentTitles[0],
+          subtitles: currentTitles.slice(1),
+          startLine: pendingStartLine,
+          endLine: endLine - 1
+        });
+      } else if(endLine > 0) {
+        chapters.push({
+          title: '(목차 없음)',
+          subtitles: [],
+          startLine: 0,
+          endLine: endLine - 1
+        });
+      }
+    };
+
+    for(let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if(!CHAPTER_RE.test(line)) continue;
+      if(ENDING_RE.test(line)) continue;
+      // 완결 표시가 포함된 챕터 제목인지 체크 (화/권/장이 있는 경우는 챕터임)
+      const hasChapterWord = /(?:화|권|장|chapter|part)\b/i.test(line);
+      if(!hasChapterWord && ENDING_RE.test(line)) continue;
+
+      if(hasHwaInFile) {
+        if(H2_RE.test(line)) {
+          // 새 챕터 시작
+          flush(i);
+          currentTitles = [line];
+          pendingStartLine = i;
+        } else {
+          if(!currentTitles.length) {
+            // 첫 제목 전 내용이 있으면 flush
+            if(i > 0) flush(i);
+            currentTitles = [line];
+            pendingStartLine = i;
+          } else {
+            currentTitles.push(line);
+          }
+        }
+      } else {
+        flush(i);
+        currentTitles = [line];
+        pendingStartLine = i;
+      }
+    }
+    flush(lines.length);
+
+    // 챕터를 하나도 못 찾은 경우 → 전체를 하나로
+    if(!chapters.length && lines.some(l => l.trim())) {
+      chapters.push({ title: '(전체)', subtitles: [], startLine: 0, endLine: lines.length - 1 });
+    }
+
+    return chapters;
+  }
+
+  function renderTxtTree() {
+    // 사이드바 헤더 레이블 변경
+    const sidebarHeaderSpan = document.querySelector('.sidebar-header > span');
+    if(sidebarHeaderSpan) sidebarHeaderSpan.textContent = 'CHAPTERS';
+
+    let html = `<div class="file-group">
+      <div class="file-group-label">📄 TXT · ${txtChapters.length}개 챕터</div>
+      <div class="file-group-items">`;
+    txtChapters.forEach((ch, idx) => {
+      const sub = ch.subtitles && ch.subtitles.length ? ` <span style="color:var(--text-dim);font-size:9px;">${ch.subtitles[0]}</span>` : '';
+      html += `<div class="file-item txt-chapter-item" data-chidx="${idx}" title="${escHtml(ch.title)}" style="padding-left:20px;">
+        <span class="icon">📌</span>
+        <span class="file-name">${escHtml(ch.title)}${sub}</span>
+        <span class="timestamp" style="font-size:9px;color:var(--text-dim);">${ch.startLine+1}</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+    fileTree.innerHTML = html;
+
+    fileTree.querySelectorAll('.txt-chapter-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.chidx);
+        scrollToTxtChapter(idx);
+        // 활성 표시
+        fileTree.querySelectorAll('.txt-chapter-item').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+      });
+    });
+  }
+
+  function scrollToTxtChapter(chIdx) {
+    const editorEl = document.getElementById('txtEditor');
+    const wrap     = document.getElementById('txtContentWrap');
+    const lineNums = document.getElementById('txtLineNums');
+    if(!editorEl || !wrap) return;
+    const ch = txtChapters[chIdx];
+    if(!ch) return;
+
+    const divs = editorEl.querySelectorAll(':scope > div');
+    const targetDiv = divs[ch.startLine];
+    if(!targetDiv) return;
+
+    // 1) 커서 먼저 이동
+    editorEl.focus();
+    const range = document.createRange();
+    const sel   = window.getSelection();
+    range.setStart(targetDiv, 0);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    // 2) focus로 인한 스크롤 재배치가 끝난 뒤 덮어쓰기
+    requestAnimationFrame(() => {
+      const scrollTarget = Math.max(0, targetDiv.offsetTop - 48);
+      wrap.scrollTop = scrollTarget;
+      if(lineNums) lineNums.scrollTop = scrollTarget;
+    });
   }
 
   // ─── SORT ───
@@ -1038,6 +1331,7 @@
 
   // ─── RENDER FILE TREE ───
   function renderFileTree() {
+    if(isTxtMode) { renderTxtTree(); return; }
     if(!Object.keys(files).length) return;
     const allFiles = Object.keys(files).map(p => ({ path: p, type: fileTypes[p] || 'other' }));
     let html = '';
@@ -1164,9 +1458,10 @@
   // ─── TABS ───
   function renderTabs() {
     editorTabs.innerHTML = openTabs.map(tab => {
-      const name = tab.path.split('/').pop();
       const isActive   = tab.path === activeTab;
       const isModified = modifiedFiles.has(tab.path);
+      // TXT 모드면 파일명으로 표시
+      const name = (fileTypes[tab.path] === 'txt-main') ? currentFileName : tab.path.split('/').pop();
       let classes = 'tab';
       if(isActive)   classes += ' active';
       if(isModified) classes += ' modified';
@@ -1203,6 +1498,7 @@
     if(!activeTab) return;
     const type = fileTypes[activeTab];
     if(type === 'image') renderImagePreview();
+    else if(type === 'txt-main') renderTextEditor(true);
     else if(['html','xml','opf','ncx','css','text'].includes(type)) renderTextEditor();
     else editorWrap.innerHTML = `<div class="empty-state"><p>바이너리 파일은 편집할 수 없습니다</p></div>`;
   }
@@ -1298,22 +1594,40 @@
     } else { updateInvisCount(0, false); }
   }
 
-  function renderTextEditor() {
+  function renderTextEditor(isTxt = false) {
+    if(isTxt) { renderTxtEditor(); return; }
+
+    // ── 일반 코드 에디터 (textarea + 줄번호) ──
     const content = files[activeTab] || '';
     editorWrap.innerHTML = `
       <div class="editor-container">
-        <textarea class="code-editor" id="codeEditor">${escHtml(content)}</textarea>
-        <div class="invis-overlay hidden" id="invisOverlay" aria-hidden="true"></div>
+        <div class="editor-inner">
+          <div class="line-numbers" id="lineNumbers"></div>
+          <textarea class="code-editor" id="codeEditor" wrap="off">${escHtml(content)}</textarea>
+          <div class="invis-overlay hidden" id="invisOverlay" aria-hidden="true"></div>
+        </div>
       </div>`;
 
-    const editor  = document.getElementById('codeEditor');
-    const overlay = document.getElementById('invisOverlay');
+    const editor   = document.getElementById('codeEditor');
+    const overlay  = document.getElementById('invisOverlay');
+    const lineNums = document.getElementById('lineNumbers');
+
+    function updateLineNumbers() {
+      const count = editor.value.split('\n').length;
+      let t = '';
+      for(let i = 1; i <= count; i++) t += i + '\n';
+      lineNums.textContent = t;
+      lineNums.scrollTop = editor.scrollTop;
+    }
+    updateLineNumbers();
 
     editor.addEventListener('scroll', () => {
+      lineNums.scrollTop = editor.scrollTop;
       if(overlay) { overlay.scrollTop = editor.scrollTop; overlay.scrollLeft = editor.scrollLeft; }
     });
     editor.addEventListener('input', () => {
       files[activeTab] = editor.value;
+      updateLineNumbers();
       if(!modifiedFiles.has(activeTab)) { modifiedFiles.add(activeTab); renderTabs(); renderFileTree(); updateStatus(); }
       if(invisModeOn) updateOverlay();
     });
@@ -1323,6 +1637,7 @@
         const s = editor.selectionStart, en = editor.selectionEnd;
         editor.value = editor.value.substring(0, s) + '  ' + editor.value.substring(en);
         editor.selectionStart = editor.selectionEnd = s + 2;
+        updateLineNumbers();
         if(invisModeOn) updateOverlay();
       }
     });
@@ -1331,6 +1646,74 @@
       editor.style.color = 'transparent'; editor.style.caretColor = 'var(--text)';
       updateOverlay();
     } else { updateButtonState(content); }
+  }
+
+  // ── TXT 전용: contenteditable + 줄바꿈 시각적 줄번호 ──
+  function renderTxtEditor() {
+    const content = files[activeTab] || '';
+    editorWrap.innerHTML = `
+      <div class="editor-container">
+        <div class="txt-editor-wrap">
+          <div class="txt-line-numbers" id="txtLineNums"></div>
+          <div class="txt-content-wrap" id="txtContentWrap">
+            <div class="txt-editor" id="txtEditor" contenteditable="true" spellcheck="false"></div>
+          </div>
+        </div>
+      </div>`;
+
+    const editorEl = document.getElementById('txtEditor');
+    const lineNums = document.getElementById('txtLineNums');
+    const wrap     = document.getElementById('txtContentWrap');
+
+    function setContent(text) {
+      const lines = text.split('\n');
+      editorEl.innerHTML = lines.map(l =>
+        '<div>' + (l ? escHtml(l) : '<br>') + '</div>'
+      ).join('');
+    }
+
+    function updateLineNumbers() {
+      const divs = editorEl.querySelectorAll(':scope > div');
+      const lh = parseFloat(getComputedStyle(editorEl).lineHeight) || 25.2;
+      let html = '';
+      divs.forEach((div, i) => {
+        const h = Math.max(div.offsetHeight, lh);
+        html += `<span style="height:${h}px;line-height:${h}px;">${i + 1}</span>`;
+      });
+      lineNums.innerHTML = html;
+      lineNums.scrollTop = wrap.scrollTop;
+    }
+
+    function getText() {
+      return Array.from(editorEl.querySelectorAll(':scope > div'))
+        .map(d => {
+          // <br>만 있으면 빈 줄
+          if(d.innerHTML === '<br>' || d.innerHTML === '') return '';
+          return d.innerText.replace(/\n$/, '');
+        }).join('\n');
+    }
+
+    setContent(content);
+    requestAnimationFrame(() => {
+      updateLineNumbers();
+    });
+
+    wrap.addEventListener('scroll', () => { lineNums.scrollTop = wrap.scrollTop; });
+
+    const ro = new ResizeObserver(() => updateLineNumbers());
+    ro.observe(editorEl);
+
+    editorEl.addEventListener('input', () => {
+      updateLineNumbers();
+      const text = getText();
+      files[activeTab] = text;
+      txtContent = text;
+      if(!modifiedFiles.has(activeTab)) { modifiedFiles.add(activeTab); renderTabs(); updateStatus(); }
+      const cleanTitle = currentFileName.replace(/\.txt$/i, '').replace(/[_\-]/g,' ').trim();
+      txtChapters = parseTxtChapters(txtContent, cleanTitle);
+      renderTxtTree();
+      fileTree.querySelectorAll('.txt-chapter-item').forEach(e => e.classList.remove('active'));
+    });
   }
 
   function renderImagePreview() {
@@ -1381,6 +1764,18 @@
 
   // ─── SAVE ───
   async function doSave() {
+    if(isTxtMode) {
+      // TXT 모드: 텍스트 파일로 저장
+      const TXT_KEY = '__txt__/' + currentFileName;
+      const content = files[TXT_KEY] || txtContent;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = currentFileName; a.click();
+      URL.revokeObjectURL(url);
+      modifiedFiles.clear();
+      renderTabs(); updateStatus();
+      return;
+    }
     if(!zip) return;
     const mimetimeTime = (zip.files['mimetype']?.date) ? zip.files['mimetype'].date : new Date();
 
@@ -1412,7 +1807,14 @@
   btnSaveMb.addEventListener('click', doSave);
 
   // ─── SEARCH ───
-  function openSearchModal()  { document.getElementById('searchModal').classList.add('show'); document.getElementById('searchInput').focus(); }
+  function openSearchModal() {
+    document.getElementById('searchModal').classList.add('show');
+    document.getElementById('searchInput').focus();
+    // TXT 모드면 필터 영역 숨김 (전체 검색만 의미 있음)
+    const filterRow = document.querySelector('.filter-btns');
+    if(filterRow) filterRow.style.display = isTxtMode ? 'none' : '';
+    if(isTxtMode) setSearchFilter('all');
+  }
   function closeSearchModal() { document.getElementById('searchModal').classList.remove('show'); renderFileTree(); renderTabs(); updateStatus(); }
 
   let searchFilter = 'all';
@@ -1716,6 +2118,16 @@
   function naturalSort(a, b) { return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }); }
 
   function updateStatus() {
+    if(isTxtMode && activeTab) {
+      statusFile.textContent = currentFileName;
+      statusType.textContent = 'TXT';
+      statusModified.textContent = modifiedFiles.size ? `수정됨` : '';
+      statusModified.className = modifiedFiles.size ? 'modified' : '';
+      statusTimestamp.textContent = '—';
+      const d = files[activeTab];
+      statusSize.textContent = d ? formatBytes(new Blob([d]).size) : '—';
+      return;
+    }
     statusFile.textContent = activeTab || '—';
     statusType.textContent = activeTab ? (fileTypes[activeTab] || '—').toUpperCase() : '—';
     statusModified.textContent = modifiedFiles.size ? `${modifiedFiles.size}개 수정됨` : '';
