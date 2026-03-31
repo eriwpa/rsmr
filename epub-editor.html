@@ -391,6 +391,8 @@
   .img-actions button:hover { border-color: var(--accent); color: var(--accent); }
   .img-actions button.danger { background: #ffe5e5; color: #d32f2f; border-color: #ffcdd2; }
   .img-actions button.danger:hover { background: #ffcdd2; }
+  .img-actions button.cover-set { background: #fff3bd; color: #7a4f00; border-color: #f0c040; font-weight: 600; }
+  .img-actions button.cover-set:hover { background: #ffe980; }
 
   /* ─── Empty state ─── */
   .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--text-dim); }
@@ -529,8 +531,7 @@
     /* topbar */
     .topbar { height: auto; min-height: 42px; gap: 6px; padding: 6px 10px; flex-wrap: nowrap; }
     .topbar .logo { font-size: 13px; letter-spacing: 0.3px; }
-    .topbar .fname { font-size: 11px; flex: 1; min-width: 0; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: unset; line-height: 1.3; }
-    .topbar .tb-right { margin-left: auto; display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .topbar .fname { font-size: 10px; flex: 1; min-width: 0; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: unset; line-height: 1.3; }
     .topbar .spacer { display: none; }
 
     /* PC 버튼 숨기고 tb-btn 보이기 */
@@ -757,10 +758,12 @@
   <button id="btnSavePc" class="primary pc-only" disabled title="저장">💾</button>
   <button id="btnResetPc" class="reset-btn pc-only" disabled title="초기화">🔄</button>
   <!-- 모바일 버튼 -->
-  <button class="tb-btn open-btn mb-only" id="btnOpenMb" style="background:none;border:none;font-size:16px;padding:0 2px;">📂</button>
-  <button id="btnUndoMb" class="mb-only" disabled title="되감기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
-  <button id="btnRedoMb" class="mb-only" disabled title="다시실행" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
-  <button id="btnSaveMb" class="tb-btn primary mb-only" disabled title="저장" style="background:none;border:none;font-size:16px;padding:0 2px;">💾</button>
+  <div class="mb-only" style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+    <button class="tb-btn open-btn" id="btnOpenMb" style="background:none;border:none;font-size:16px;padding:0 2px;">📂</button>
+    <button id="btnUndoMb" disabled title="되감기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
+    <button id="btnRedoMb" disabled title="다시실행" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
+    <button id="btnSaveMb" class="tb-btn primary" disabled title="저장" style="background:none;border:none;font-size:16px;padding:0 2px;">💾</button>
+  </div>
   <input type="file" id="fileInput" accept=".epub,.txt" style="display:none"/>
 </div>
 
@@ -1914,6 +1917,7 @@
         <div class="img-actions">
           <button onclick="replaceImage()">교체</button>
           <button onclick="downloadImage('${src}','${safeFname}')">다운로드</button>
+          <button class="${activeTab === coverImagePath ? 'cover-set' : ''}" onclick="setCoverImage('${safePath}')">${activeTab === coverImagePath ? '표지 ✔️' : '표지 설정'}</button>
           <button class="danger" onclick="deleteFileConfirm('${safePath}')">🗑️ 삭제</button>
         </div>
       </div>`;
@@ -1941,6 +1945,51 @@
 
   function downloadImage(src, fname) {
     const a = document.createElement('a'); a.href = src; a.download = fname; a.click();
+  }
+
+  function setCoverImage(path) {
+    if(!opfPath || !files[opfPath]) { alert('OPF 파일을 찾을 수 없습니다.'); return; }
+    const opfDir = opfPath.includes('/') ? opfPath.split('/').slice(0,-1).join('/') + '/' : '';
+    const relPath = path.startsWith(opfDir) ? path.slice(opfDir.length) : path;
+
+    // OPF에서 이 파일의 id 찾기
+    let itemId = null;
+    const opf = files[opfPath];
+    for(const m of opf.matchAll(/<item[^>]+\/>/gi)) {
+      const tag = m[0];
+      const hrefM = tag.match(/href=["']([^"']+)["']/i);
+      const idM   = tag.match(/\bid=["']([^"']+)["']/i);
+      if(hrefM && idM) {
+        const href = hrefM[1];
+        // href가 relPath와 일치하거나 파일명만 비교
+        if(href === relPath || href === relPath.replace(/^.*\//,'') || relPath.endsWith(href)) {
+          itemId = idM[1];
+          break;
+        }
+      }
+    }
+    if(!itemId) { alert('OPF에서 해당 이미지의 id를 찾을 수 없습니다.'); return; }
+
+    pushFileHistory(`표지 설정: ${path.split('/').pop()}`, [opfPath]);
+
+    let newOpf = opf;
+    // 기존 <meta name="cover" ...> 교체 or 삽입
+    const metaPattern = /<meta\s[^>]*name=["']cover["'][^>]*\/>/gi;
+    const metaPattern2 = /<meta\s[^>]*content=["'][^"']+["'][^>]*name=["']cover["'][^>]*\/>/gi;
+    const newMeta = `<meta name="cover" content="${itemId}"/>`;
+    if(metaPattern.test(newOpf)) {
+      newOpf = newOpf.replace(/<meta\s[^>]*name=["']cover["'][^>]*\/>/gi, newMeta);
+    } else if(metaPattern2.test(newOpf)) {
+      newOpf = newOpf.replace(/<meta\s[^>]*content=["'][^"']+["'][^>]*name=["']cover["'][^>]*\/>/gi, newMeta);
+    } else {
+      // <metadata> 블록 안에 삽입
+      newOpf = newOpf.replace(/(<metadata[^>]*>)/i, `$1\n    ${newMeta}`);
+    }
+
+    files[opfPath] = newOpf;
+    modifiedFiles.add(opfPath);
+    coverImagePath = path;
+    renderEditor(); renderTabs(); renderFileTree(); updateStatus();
   }
 
   // ─── SAVE ───
