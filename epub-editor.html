@@ -76,49 +76,46 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
-  /* PC topbar 버튼 */
+  /* PC topbar 버튼 — 박스 없이 이모지 스타일 */
   .topbar button {
-    background: var(--bg3);
-    border: 1px solid var(--border);
+    background: none;
+    border: none;
     color: var(--text);
     font-family: var(--font-ui);
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 500;
-    padding: 6px 14px;
-    border-radius: 6px;
+    padding: 0 6px;
     cursor: pointer;
-    transition: all .15s;
+    transition: transform .12s, opacity .12s;
     flex-shrink: 0;
+    opacity: 0.75;
+    line-height: 1;
   }
-  .topbar button:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text-bright); }
-  .topbar button.primary { background: #ffd9df; border-color: #ffd9df; color: #4c4143; }
-  .topbar button.primary:hover { background: #ff8b9a; }
-  .topbar button.open-btn { background: #c4c1ef; border-color: #c4c1ef; color: white; }
-  .topbar button.open-btn:hover { background: #7c6aff; }
-  .topbar button.reset-btn { background: #b3deeb; border-color: #b3deeb; color: white; }
-  .topbar button.reset-btn:hover { background: #69a4b7; }
-  .topbar button:disabled { opacity: .35; cursor: default; pointer-events: none; }
+  .topbar button:hover { transform: scale(1.18); opacity: 1; }
+  .topbar button.primary { font-size: 18px; }
+  .topbar button.open-btn { font-size: 18px; }
+  .topbar button.reset-btn { font-size: 18px; }
+  .topbar button:disabled { opacity: .22; cursor: default; pointer-events: none; transform: none; }
 
   /* 모바일 topbar 버튼 — .tb-btn (기본 숨김, 모바일에서만 표시) */
   .tb-btn {
-    background: var(--bg3);
-    border: 1px solid var(--border);
+    background: none;
+    border: none;
     color: var(--text);
-    font-size: 13px;
-    width: 30px; height: 30px;
-    border-radius: 6px;
+    font-size: 20px;
+    padding: 0 5px;
     cursor: pointer;
     display: none;
     align-items: center; justify-content: center;
-    transition: all .15s;
+    transition: transform .12s, opacity .12s;
     flex-shrink: 0;
+    opacity: 0.75;
+    line-height: 1;
   }
-  .tb-btn:active { background: var(--bg-hover); border-color: var(--accent); }
-  .tb-btn.primary { background: #ffd9df; border-color: #ffd9df; color: #4c4143; }
-  .tb-btn.primary:active { background: #ff8b9a; }
-  .tb-btn.open-btn { background: #c4c1ef; border-color: #c4c1ef; color: white; font-weight: 600; font-size: 11px; width: auto; padding: 0 10px; }
-  .tb-btn.open-btn:active { background: #7c6aff; }
-  .tb-btn:disabled { opacity: .35; pointer-events: none; }
+  .tb-btn:active { transform: scale(0.9); opacity: 1; }
+  .tb-btn.primary { font-size: 20px; }
+  .tb-btn.open-btn { font-size: 20px; font-weight: 600; width: auto; padding: 0 5px; }
+  .tb-btn:disabled { opacity: .22; pointer-events: none; transform: none; }
 
   /* PC 전용 버튼 */
   .pc-only { display: flex; }
@@ -530,9 +527,9 @@
   @media (max-width: 768px) {
 
     /* topbar */
-    .topbar { height: 42px; gap: 6px; padding: 0 10px; }
+    .topbar { height: auto; min-height: 42px; gap: 6px; padding: 6px 10px; flex-wrap: nowrap; }
     .topbar .logo { font-size: 13px; letter-spacing: 0.3px; }
-    .topbar .fname { font-size: 10px; flex: 1; min-width: 0; }
+    .topbar .fname { font-size: 10px; flex: 1; min-width: 0; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: unset; line-height: 1.3; }
     .topbar .spacer { display: none; }
 
     /* PC 버튼 숨기고 tb-btn 보이기 */
@@ -587,7 +584,8 @@
     .tab { padding: 4px 10px; font-size: 10px; max-width: 130px; }
 
     /* code editor 모바일 */
-    .code-editor { font-size: 12px; line-height: 1.65; padding: 10px 12px; }
+    .code-editor { font-size: 12px; line-height: 1.65; padding: 10px 12px; white-space: pre-wrap; word-break: break-all; overflow-x: hidden; }
+    .invis-overlay { font-size: 12px; line-height: 1.65; padding: 10px 12px; background: var(--bg); white-space: pre-wrap; word-break: break-all; overflow-x: hidden; }
     .invis-overlay { font-size: 12px; line-height: 1.65; padding: 10px 12px; background: var(--bg); }
     .line-numbers { font-size: 9px; line-height: 1.65; padding: 10px 6px 10px 4px; min-width: 32px; }
     .line-numbers.txt-mode { font-size: 9px; line-height: 1.75; }
@@ -754,9 +752,9 @@
   <button id="btnUndo" class="pc-only" disabled title="되감기 (Ctrl+Z)" style="background:none;border:none;font-size:18px;padding:0 4px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
   <button id="btnRedo" class="pc-only" disabled title="다시실행 (Ctrl+Y)" style="background:none;border:none;font-size:18px;padding:0 4px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
   <!-- PC 버튼 -->
-  <button class="open-btn pc-only" id="btnOpenPc">Open</button>
-  <button id="btnSavePc" class="primary pc-only" disabled>Save</button>
-  <button id="btnResetPc" class="reset-btn pc-only" disabled>Reset</button>
+  <button class="open-btn pc-only" id="btnOpenPc" title="파일 열기">📂</button>
+  <button id="btnSavePc" class="primary pc-only" disabled title="저장">💾</button>
+  <button id="btnResetPc" class="reset-btn pc-only" disabled title="초기화">🔄</button>
   <!-- 모바일 버튼 -->
   <button class="tb-btn open-btn mb-only" id="btnOpenMb">📖</button>
   <button id="btnUndoMb" class="mb-only" disabled title="되감기" style="background:none;border:none;font-size:18px;padding:0 4px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
