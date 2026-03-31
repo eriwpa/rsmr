@@ -102,8 +102,8 @@
     background: none;
     border: none;
     color: var(--text);
-    font-size: 20px;
-    padding: 0 5px;
+    font-size: 15px;
+    padding: 0 4px;
     cursor: pointer;
     display: none;
     align-items: center; justify-content: center;
@@ -113,8 +113,8 @@
     line-height: 1;
   }
   .tb-btn:active { transform: scale(0.9); opacity: 1; }
-  .tb-btn.primary { font-size: 20px; }
-  .tb-btn.open-btn { font-size: 20px; font-weight: 600; width: auto; padding: 0 5px; }
+  .tb-btn.primary { font-size: 15px; }
+  .tb-btn.open-btn { font-size: 15px; font-weight: 600; width: auto; padding: 0 4px; }
   .tb-btn:disabled { opacity: .22; pointer-events: none; transform: none; }
 
   /* PC 전용 버튼 */
@@ -745,7 +745,7 @@
 <!-- ─── Top bar ─── -->
 <div class="topbar">
   <div class="logo">👻 EP_Editor</div>
-  <span class="fname" id="topFname">EPUB / TXT 미열람</span>
+  <span class="fname" id="topFname" style="background:none;border:none;font-size:11px;">EPUB / TXT 미열람</span>
   <div class="spacer"></div>
   <button class="theme-toggle" id="btnTheme" title="테마 전환">🌙</button>
   <!-- undo/redo -->
@@ -756,10 +756,10 @@
   <button id="btnSavePc" class="primary pc-only" disabled title="저장">💾</button>
   <button id="btnResetPc" class="reset-btn pc-only" disabled title="초기화">🔄</button>
   <!-- 모바일 버튼 -->
-  <button class="tb-btn open-btn mb-only" id="btnOpenMb">📖</button>
-  <button id="btnUndoMb" class="mb-only" disabled title="되감기" style="background:none;border:none;font-size:18px;padding:0 4px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
-  <button id="btnRedoMb" class="mb-only" disabled title="다시실행" style="background:none;border:none;font-size:18px;padding:0 4px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
-  <button id="btnSaveMb" class="tb-btn primary mb-only" disabled title="저장">💾</button>
+  <button class="tb-btn open-btn mb-only" id="btnOpenMb" style="background:none;border:none;font-size:16px;padding:0 2px;">📂</button>
+  <button id="btnUndoMb" class="mb-only" disabled title="되감기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
+  <button id="btnRedoMb" class="mb-only" disabled title="다시실행" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
+  <button id="btnSaveMb" class="tb-btn primary mb-only" disabled title="저장" style="background:none;border:none;font-size:16px;padding:0 2px;">💾</button>
   <input type="file" id="fileInput" accept=".epub,.txt" style="display:none"/>
 </div>
 
@@ -1115,7 +1115,7 @@
     const sidebarHeaderSpan = document.querySelector('.sidebar-header > span');
     if(sidebarHeaderSpan) sidebarHeaderSpan.textContent = 'FILE TREE';
     setSaveDisabled(true); setControlsDisabled(true);
-    fileTree.innerHTML = `<div class="empty-state" style="padding:40px 14px; font-size:11px; text-align:center;">EPUB 파일을 열면<br/>내부 구조가 표시됩니다</div>`;
+    fileTree.innerHTML = `<div class="empty-state" style="padding:40px 14px; font-size:12px; text-align:center;">EPUB 파일을 열면<br/>내부 구조가 표시됩니다</div>`;
     editorTabs.innerHTML = '';
     editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>${isMobile ? '버튼을 눌러 EPUB을 여세요' : '왼쪽 파일 트리에서 편집할 파일을 선택하세요'}</p></div>`;
     updateStatus();
