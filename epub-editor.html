@@ -439,7 +439,7 @@
 
   /* ─── SEARCH MODAL ─── */
   .search-input-wrap { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
-  .search-input-wrap input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
+  .search-input-wrap input { flex: 1; min-width: 0; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
   .search-input-wrap input:focus { border-color: var(--accent); }
   .search-options { display: flex; gap: 16px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
   .search-options label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
@@ -631,7 +631,7 @@
 
     /* search input 모바일 */
     .search-input-wrap { gap: 8px; margin-bottom: 12px; }
-    .search-input-wrap input { padding: 9px 12px; font-size: 13px; }
+    .search-input-wrap input { padding: 9px 12px; font-size: 13px; min-width: 0; flex: 1; }
     .search-results { max-height: 280px; }
 
     /* toc 모바일 */
@@ -673,12 +673,12 @@
     </div>
     <div class="modal-body">
       <div class="search-input-wrap">
-        <input type="text" id="searchInput" placeholder="찾을 텍스트를 입력하세요..." onkeypress="if(event.key==='Enter')performSearch()"/>
-        <button onclick="performSearch()" style="padding:10px 20px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;">검색</button>
+        <input type="text" id="searchInput" placeholder="검색어..." onkeypress="if(event.key==='Enter')performSearch()"/>
+        <button onclick="performSearch()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔍</button>
       </div>
       <div class="search-input-wrap" style="margin-top:10px;">
-        <input type="text" id="replaceInput" placeholder="바꿀 텍스트를 입력하세요..."/>
-        <button onclick="replaceAllInFiles()" style="padding:10px 12px;background:var(--green);color:white;border:none;border-radius:6px;cursor:pointer;align-self:center;white-space:nowrap;font-size:13px;">모두 바꾸기</button>
+        <input type="text" id="replaceInput" placeholder="바꿀 텍스트..."/>
+        <button onclick="replaceAllInFiles()" style="padding:8px 14px;background:var(--green);color:white;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-size:12px;">바꾸기</button>
       </div>
       <div class="search-options">
         <label><input type="checkbox" id="caseSensitive"/> 대소문자 구분</label>
@@ -864,6 +864,7 @@
   let tocFilePath = null;
   let opfPath = null;
   let spine = [];
+  let coverImagePath = null;
   let sortMode = 'type';
   let currentFileName = '';
   const invisModeOn = true;  // 항상 표시
@@ -1105,6 +1106,7 @@
     zip = null; files = {}; fileTypes = {}; fileTimestamps = {};
     openTabs = []; activeTab = null; modifiedFiles.clear();
     tocEntries = []; newTocEntries = []; tocFilePath = null;
+    coverImagePath = null;
     opfPath = null; spine = []; currentFileName = '';
     isTxtMode = false; txtChapters = []; txtContent = '';
     fileHistory = []; fileFuture = [];
@@ -1403,6 +1405,62 @@
         tocFilePath = p; parseToc(p); break;
       }
     }
+
+    // ── 커버 이미지 감지 ──
+    coverImagePath = detectCoverImage(content, opfDir);
+  }
+
+  function detectCoverImage(opfContent, opfDir) {
+    const imgExts = ['.jpg','.jpeg','.png','.gif','.webp'];
+    const full = href => {
+      const p = (opfDir + href).replace('//', '/');
+      return files[p] !== undefined ? p : null;
+    };
+
+    // 1) properties="cover-image"
+    for(const m of opfContent.matchAll(/<item\s[^>]*properties=["'][^"']*cover-image[^"']*["'][^>]*\/>/gi)) {
+      const hm = m[0].match(/href=["']([^"']+)["']/i);
+      if(hm) { const p = full(hm[1]); if(p && imgExts.some(e => p.toLowerCase().endsWith(e))) return p; }
+    }
+
+    // 2) <meta name="cover" content="id"/>
+    let mm = opfContent.match(/<meta\s[^>]*name=["']cover["'][^>]*content=["']([^"']+)["']/i);
+    if(!mm) mm = opfContent.match(/<meta\s[^>]*content=["']([^"']+)["'][^>]*name=["']cover["']/i);
+    if(mm) {
+      // id→href 매핑
+      const idToHref = {};
+      for(const m of opfContent.matchAll(/<item[^>]+id=["']([^"']+)["'][^>]+href=["']([^"']+)["']/gi)) idToHref[m[1]] = m[2];
+      for(const m of opfContent.matchAll(/<item[^>]+href=["']([^"']+)["'][^>]+id=["']([^"']+)["']/gi)) idToHref[m[2]] = m[1];
+      const href = idToHref[mm[1]];
+      if(href) { const p = full(href); if(p && imgExts.some(e => p.toLowerCase().endsWith(e))) return p; }
+    }
+
+    // 3) <guide><reference type="cover" href="..."/> → xhtml → <img src>
+    let gm = opfContent.match(/<reference\s[^>]*type=["']cover["'][^>]*href=["']([^"'#]+)/i);
+    if(!gm) gm = opfContent.match(/<reference\s[^>]*href=["']([^"'#]+)["'][^>]*type=["']cover["']/i);
+    if(gm) {
+      const coverXhtml = full(gm[1]);
+      if(coverXhtml && typeof files[coverXhtml] === 'string') {
+        const im = files[coverXhtml].match(/<img\s[^>]*src=["']([^"']+)["']/i);
+        if(im) {
+          const xhtmlDir = coverXhtml.includes('/') ? coverXhtml.split('/').slice(0,-1).join('/') + '/' : '';
+          const p = full(xhtmlDir + im[1].replace(/^\.\//, ''));
+          if(p && imgExts.some(e => p.toLowerCase().endsWith(e))) return p;
+        }
+      }
+      if(coverXhtml && imgExts.some(e => coverXhtml.toLowerCase().endsWith(e))) return coverXhtml;
+    }
+
+    // 4) id에 "cover" 포함된 image 타입 item
+    for(const m of opfContent.matchAll(/<item\s[^>]*\/>/gi)) {
+      const tag = m[0];
+      if(!/\bid=["'][^"']*cover[^"']*["']/i.test(tag)) continue;
+      if(!/media-type=["']image\//i.test(tag)) continue;
+      const hm = tag.match(/href=["']([^"']+)["']/i);
+      if(hm) { const p = full(hm[1]); if(p && imgExts.some(e => p.toLowerCase().endsWith(e))) return p; }
+    }
+
+    return null;
   }
 
   function parseToc(path) {
@@ -1515,7 +1573,8 @@
   }
 
   function renderFileItem(f, spineIndex = null) {
-    const icon = getFileIcon(f.type);
+    const isCover = f.path === coverImagePath;
+    const icon = isCover ? '📸' : getFileIcon(f.type);
     const name = f.path.split('/').pop();
     const ts = fileTimestamps[f.path];
     const timestamp = ts ? formatTimestamp(ts) : '';
