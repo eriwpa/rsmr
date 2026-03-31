@@ -34,9 +34,9 @@
     --bg-hover: #252838;
     --border: #2a2e3d;
     --text: #c8ccd8;
-    --text-dim: #5a5f72;
+    --text-dim: #7c8094;
     --text-bright: #eef0f5;
-    --accent: #7c6aff;
+    --accent: #b1a7f8;
     --accent-dim: rgba(124,106,255,0.15);
     --red: #f87171;
     --green: #4ade80;
@@ -609,13 +609,13 @@
       left: 12px;
       width: 40px; height: 40px;
       border-radius: 12px;
-      background: var(--accent);
+      background: #9585eeb9;
       color: white;
       border: none;
       font-size: 16px;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(90,79,212,0.4);
+      box-shadow: 0 4px 12px rgba(90,79,212,0.4);
       z-index: 49;
       transition: all .2s;
     }
@@ -1026,9 +1026,9 @@
 
     topFname.textContent = `${currentFileName} · ${formatBytes(file.size)} · TXT`;
     setSaveDisabled(false);
+    if(btnResetPc) btnResetPc.disabled = false;  // TXT에서도 Reset 활성화
     // 검색 버튼만 활성화 (TOC 버튼은 TXT에서 불필요)
     btnSearch.disabled = false;
-    if(btnResetPc) btnResetPc.disabled = false;
 
     renderTxtTree();
     openFile(TXT_KEY);
@@ -1596,7 +1596,47 @@
       editor.style.color      = invisModeOn ? 'transparent' : '';
       editor.style.caretColor = invisModeOn ? 'var(--text)' : '';
       updateOverlay();
-    } else { updateInvisCount(0, false); }
+    } else {
+      // TXT 모드
+      const txtEditor = document.getElementById('txtEditor');
+      if(txtEditor) {
+        updateTxtInvis(txtEditor);
+      } else {
+        updateInvisCount(0, false);
+      }
+    }
+  }
+
+  function updateTxtInvis(editorEl) {
+    const text = Array.from(editorEl.querySelectorAll(':scope > div'))
+      .map(d => d.innerHTML === '<br>' || d.innerHTML === '' ? '' : d.innerText.replace(/\n$/, ''))
+      .join('\n');
+    const zwCount = countInvisChars(text);
+    updateButtonState(text);
+    if(!invisModeOn) {
+      // 원래 텍스트로 복원 (뱃지 제거)
+      const lines = text.split('\n');
+      editorEl.innerHTML = lines.map(l => '<div>' + (l ? escHtml(l) : '<br>') + '</div>').join('');
+      return;
+    }
+    // 각 div 순회하며 invisible 문자 뱃지로 교체
+    const divs = editorEl.querySelectorAll(':scope > div');
+    divs.forEach(div => {
+      if(div.innerHTML === '<br>' || div.innerHTML === '') return;
+      const raw = div.innerText.replace(/\n$/, '');
+      let html = '';
+      for(let i = 0; i < raw.length; i++) {
+        const ch = raw[i];
+        if(INVIS_CHARS[ch]) {
+          const code = ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0');
+          html += `<span class="invis-badge" title="U+${code} ${INVIS_CHARS[ch]}">${INVIS_CHARS[ch]}</span>`;
+        } else if(ch === '&') html += '&amp;';
+        else if(ch === '<') html += '&lt;';
+        else if(ch === '>') html += '&gt;';
+        else html += ch;
+      }
+      div.innerHTML = html || '<br>';
+    });
   }
 
   function renderTextEditor(isTxt = false) {
@@ -1703,6 +1743,8 @@
     setContent(content);
     requestAnimationFrame(() => {
       updateLineNumbers();
+      updateButtonState(content);
+      if(invisModeOn) updateTxtInvis(editorEl);
     });
 
     wrap.addEventListener('scroll', () => { lineNums.scrollTop = wrap.scrollTop; });
@@ -1715,6 +1757,7 @@
       const text = getText();
       files[activeTab] = text;
       txtContent = text;
+      updateButtonState(text);
       if(!modifiedFiles.has(activeTab)) { modifiedFiles.add(activeTab); renderTabs(); updateStatus(); }
       const cleanTitle = currentFileName.replace(/\.txt$/i, '').replace(/[_\-]/g,' ').trim();
       txtChapters = parseTxtChapters(txtContent, cleanTitle);
@@ -1903,8 +1946,37 @@
     if(totalCount > 0) {
       alert(`${fileCount}개 파일에서 ${totalCount}개 항목을 바꿨습니다`);
       if(activeTab && files[activeTab]) {
-        const textarea = document.getElementById('codeEditor');
-        if(textarea) { textarea.value = files[activeTab]; if(invisModeOn) updateOverlay(); }
+        if(isTxtMode) {
+          // TXT 모드: contenteditable txtEditor 즉시 갱신
+          const txtEditorEl = document.getElementById('txtEditor');
+          if(txtEditorEl) {
+            const lines = files[activeTab].split('\n');
+            txtEditorEl.innerHTML = lines.map(l =>
+              '<div>' + (l ? escHtml(l) : '<br>') + '</div>'
+            ).join('');
+            txtContent = files[activeTab];
+            // 줄번호 재계산
+            requestAnimationFrame(() => {
+              const lineNums = document.getElementById('txtLineNums');
+              const wrap     = document.getElementById('txtContentWrap');
+              if(lineNums && wrap) {
+                const cs = getComputedStyle(txtEditorEl);
+                const lh = parseFloat(cs.lineHeight) || 25.2;
+                let html = '';
+                txtEditorEl.querySelectorAll(':scope > div').forEach((div, i) => {
+                  const h = Math.max(div.offsetHeight, lh);
+                  html += `<span style="height:${h}px;line-height:1;display:flex;align-items:flex-start;justify-content:flex-end;">${i + 1}</span>`;
+                });
+                lineNums.innerHTML = html;
+                lineNums.style.paddingTop = cs.paddingTop;
+              }
+            });
+          }
+        } else {
+          // EPUB 모드: textarea 즉시 갱신
+          const textarea = document.getElementById('codeEditor');
+          if(textarea) { textarea.value = files[activeTab]; if(invisModeOn) updateOverlay(); }
+        }
       }
       renderFileTree(); renderTabs(); updateStatus(); performSearch();
     } else { alert(`"${searchText}"를 찾을 수 없습니다`); }
