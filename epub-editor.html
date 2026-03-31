@@ -51,7 +51,7 @@
     color: var(--text);
     overflow: hidden;
     user-select: none;
-    height: 100dvh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
   }
@@ -2146,6 +2146,11 @@
   }
 
   // ─── INIT ───
+  function fixHeight() {
+    document.body.style.height = window.innerHeight + 'px';
+  }
+  window.addEventListener('resize', fixHeight);
+  fixHeight();
   detectMode();
 
 </script>
