@@ -1028,6 +1028,7 @@
     setSaveDisabled(false);
     // 검색 버튼만 활성화 (TOC 버튼은 TXT에서 불필요)
     btnSearch.disabled = false;
+    if(btnResetPc) btnResetPc.disabled = false;
 
     renderTxtTree();
     openFile(TXT_KEY);
@@ -1595,47 +1596,7 @@
       editor.style.color      = invisModeOn ? 'transparent' : '';
       editor.style.caretColor = invisModeOn ? 'var(--text)' : '';
       updateOverlay();
-    } else {
-      // TXT 모드
-      const txtEditor = document.getElementById('txtEditor');
-      if(txtEditor) {
-        updateTxtInvis(txtEditor);
-      } else {
-        updateInvisCount(0, false);
-      }
-    }
-  }
-
-  function updateTxtInvis(editorEl) {
-    const text = Array.from(editorEl.querySelectorAll(':scope > div'))
-      .map(d => d.innerHTML === '<br>' || d.innerHTML === '' ? '' : d.innerText.replace(/\n$/, ''))
-      .join('\n');
-    const zwCount = countInvisChars(text);
-    updateButtonState(text);
-    if(!invisModeOn) {
-      // 원래 텍스트로 복원 (뱃지 제거)
-      const lines = text.split('\n');
-      editorEl.innerHTML = lines.map(l => '<div>' + (l ? escHtml(l) : '<br>') + '</div>').join('');
-      return;
-    }
-    // 각 div 순회하며 invisible 문자 뱃지로 교체
-    const divs = editorEl.querySelectorAll(':scope > div');
-    divs.forEach(div => {
-      if(div.innerHTML === '<br>' || div.innerHTML === '') return;
-      const raw = div.innerText.replace(/\n$/, '');
-      let html = '';
-      for(let i = 0; i < raw.length; i++) {
-        const ch = raw[i];
-        if(INVIS_CHARS[ch]) {
-          const code = ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0');
-          html += `<span class="invis-badge" title="U+${code} ${INVIS_CHARS[ch]}">${INVIS_CHARS[ch]}</span>`;
-        } else if(ch === '&') html += '&amp;';
-        else if(ch === '<') html += '&lt;';
-        else if(ch === '>') html += '&gt;';
-        else html += ch;
-      }
-      div.innerHTML = html || '<br>';
-    });
+    } else { updateInvisCount(0, false); }
   }
 
   function renderTextEditor(isTxt = false) {
@@ -1742,8 +1703,6 @@
     setContent(content);
     requestAnimationFrame(() => {
       updateLineNumbers();
-      updateButtonState(content);
-      if(invisModeOn) updateTxtInvis(editorEl);
     });
 
     wrap.addEventListener('scroll', () => { lineNums.scrollTop = wrap.scrollTop; });
@@ -1756,7 +1715,6 @@
       const text = getText();
       files[activeTab] = text;
       txtContent = text;
-      updateButtonState(text);
       if(!modifiedFiles.has(activeTab)) { modifiedFiles.add(activeTab); renderTabs(); updateStatus(); }
       const cleanTitle = currentFileName.replace(/\.txt$/i, '').replace(/[_\-]/g,' ').trim();
       txtChapters = parseTxtChapters(txtContent, cleanTitle);
