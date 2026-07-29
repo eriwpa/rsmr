@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPUB 텍스트 비교 (순서 매칭)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #fafaff;
+            --surface: #ffffff;
+            --border: #e9ecf5;
+            --text: #3d4451;
+            --text-soft: #8890a0;
+            --pink: #ffb3d1;
+            --blue: #a8d5ff;
+            --purple: #d4c5f9;
+            --add-bg: #f0f9ff;
+            --add-text: #5b9fd1;
+            --remove-bg: #fff5f8;
+            --remove-text: #d18ba0;
+            --hover: #f5f7fb;
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+        }
+
+        .top-bar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1.2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .subtitle {
+            font-size: 0.78rem;
+            color: var(--text-soft);
+        }
+
+        .upload-btn {
+            padding: 0.6rem 1.2rem;
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .upload-btn:hover {
+            background: var(--hover);
+            border-color: var(--purple);
+        }
+
+        .upload-btn.active {
+            background: linear-gradient(135deg, var(--pink), var(--purple));
+            color: white;
+            border-color: transparent;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 360px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar.show {
+            display: flex;
+        }
+
+        .sidebar-header {
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .file-count {
+            font-size: 0.8rem;
+            color: var(--text-soft);
+            background: var(--hover);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+        }
+
+        .tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .tree-item {
+            padding: 0.6rem 0.8rem;
+            margin: 0.2rem 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+        }
+
+        .tree-item:hover {
+            background: var(--hover);
+        }
+
+        .tree-item.selected {
+            background: linear-gradient(135deg, rgba(255, 179, 209, 0.15), rgba(212, 197, 249, 0.15));
+            border-left: 3px solid var(--purple);
+            padding-left: calc(0.8rem - 3px);
+        }
+
+        .tree-item.modified {
+            border-left: 3px solid var(--pink);
+            padding-left: calc(0.8rem - 3px);
+        }
+
+        .tree-item.selected.modified {
+            background: linear-gradient(135deg, rgba(255, 179, 209, 0.2), rgba(212, 197, 249, 0.2));
+        }
+
+        .file-icon {
+            font-size: 1rem;
+        }
+
+        .file-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .file-sub {
+            font-size: 0.7rem;
+            color: var(--text-soft);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-badge {
+            font-size: 0.7rem;
+            background: var(--remove-bg);
+            color: var(--remove-text);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .file-badge.rename {
+            background: #eef0ff;
+            color: #5b6bd1;
+        }
+
+        .folder-item {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-soft);
+            font-weight: 600;
+            margin-top: 0.8rem;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .content-header.show {
+            display: flex;
+        }
+
+        .file-info-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            min-width: 0;
+        }
+
+        .current-file {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .file-meta {
+            font-size: 0.78rem;
+            color: var(--text-soft);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem 1.5rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .diff-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .nav-btn {
+            padding: 0.5rem 0.9rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--hover);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .diff-count {
+            font-size: 0.85rem;
+            color: var(--text-soft);
+            padding: 0.5rem 0.8rem;
+        }
+
+        .view-area {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg);
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+            min-height: 100%;
+        }
+
+        .pane {
+            background: var(--surface);
+            padding: 2rem;
+        }
+
+        .pane-header {
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid;
+            z-index: 5;
+        }
+
+        .pane:first-child .pane-header {
+            border-bottom-color: var(--remove-text);
+        }
+
+        .pane:last-child .pane-header {
+            border-bottom-color: var(--add-text);
+        }
+
+        .pane-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .pane-path {
+            font-size: 0.72rem;
+            color: var(--text-soft);
+            margin-top: 0.3rem;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .diff-text {
+            font-size: 0.95rem;
+            line-height: 2;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .ws {
+            position: relative;
+            font-weight: 400;
+            padding: 0;
+            border-radius: 2px;
+            font-size: 0.6em;
+            display: inline-block;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .ws-normal {
+            color: var(--text-soft);
+            background: transparent;
+            opacity: 0.25;
+            font-size: 0.7em;
+        }
+
+        .ws-special {
+            color: #999;
+            font-weight: 400;
+            padding: 0;
+            border: none;
+            min-width: 0.4em;
+            opacity: 0.6;
+            font-size: 0.5em;
+        }
+
+        .ws-special.ws-wj,
+        .ws-special.ws-is {
+            color: #cc00cc;
+            opacity: 0.8;
+            font-size: 0.6em;
+        }
+
+        body.hide-whitespace .ws-normal {
+            display: none;
+        }
+
+        body.hide-all-whitespace .ws {
+            display: none;
+        }
+
+        .ws:hover {
+            opacity: 1;
+            background: #fff3cd;
+            padding: 0.1rem 0.3rem;
+            font-size: 0.85em;
+            border-radius: 3px;
+        }
+
+        .ws:hover::after {
+            content: attr(data-code);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2d3748;
+            color: white;
+            padding: 0.4rem 0.7rem;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            z-index: 100;
+            pointer-events: none;
+            margin-bottom: 0.3rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .ws-legend {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            display: none;
+            z-index: 50;
+            max-width: 350px;
+            max-height: 600px;
+        }
+
+        .ws-legend.show {
+            display: block;
+        }
+
+        .ws-legend-title {
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            color: var(--text);
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .legend-close {
+            cursor: pointer;
+            color: var(--text-soft);
+            font-size: 1.2rem;
+            line-height: 1;
+            padding: 0.2rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .legend-close:hover {
+            background: var(--hover);
+            color: var(--text);
+        }
+
+        .ws-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin: 0.5rem 0;
+            color: var(--text);
+        }
+
+        .removed {
+            background: var(--remove-bg);
+            color: var(--text);
+            padding: 1px 3px;
+            border-radius: 3px;
+            text-decoration: line-through;
+            border-left: 2px solid var(--remove-text);
+            opacity: 0.85;
+        }
+
+        .added {
+            background: var(--add-bg);
+            color: var(--text);
+            padding: 1px 3px;
+            border-radius: 3px;
+            border-left: 2px solid var(--add-text);
+            opacity: 0.85;
+        }
+
+        .diff-marker {
+            scroll-margin-top: 100px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-soft);
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.4;
+        }
+
+        .empty-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: rgba(250, 250, 255, 0.95);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-box {
+            background: var(--surface);
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top-color: var(--purple);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        .loading-text {
+            font-size: 1rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .stats-bar {
+            padding: 1rem 1.5rem;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: none;
+            gap: 2rem;
+            font-size: 0.85rem;
+            align-items: center;
+        }
+
+        .stats-bar.show {
+            display: flex;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-soft);
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--purple);
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="top-bar">
+            <div>
+                <div class="title">📚 EPUB 텍스트 비교</div>
+                <div class="subtitle">각 파일 자체의 spine/NCX 읽기 순서로 정렬 후, 순서대로 짝지어 본문 텍스트만 비교합니다 (파일명·경로 무시)</div>
+            </div>
+            <button class="upload-btn" id="uploadBtn1" onclick="document.getElementById('file1').click()">
+                <span id="fileName1">파일 1 선택</span>
+            </button>
+            <button class="upload-btn" id="uploadBtn2" onclick="document.getElementById('file2').click()">
+                <span id="fileName2">파일 2 선택</span>
+            </button>
+            <input type="file" id="file1" accept=".epub" onchange="handleFile(1, this)">
+            <input type="file" id="file2" accept=".epub" onchange="handleFile(2, this)">
+        </div>
+
+        <div class="main">
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">읽기 순서</div>
+                    <div class="file-count" id="fileCount">0개 항목</div>
+                </div>
+                <div class="tree-container" id="treeContainer"></div>
+            </div>
+
+            <div class="content">
+                <div class="content-header" id="contentHeader">
+                    <div class="file-info-bar">
+                        <div class="current-file" id="currentFileName">파일을 선택하세요</div>
+                        <div class="file-meta" id="fileMeta"></div>
+                    </div>
+                    <div class="diff-nav" id="diffNav">
+                        <button class="nav-btn" onclick="prevDiff()">← 이전</button>
+                        <div class="diff-count" id="diffCount">0/0</div>
+                        <button class="nav-btn" onclick="nextDiff()">다음 →</button>
+                    </div>
+                </div>
+
+                <div class="view-area" id="viewArea">
+                    <div class="empty-state">
+                        <div class="empty-icon">📄</div>
+                        <div class="empty-text">두 개의 EPUB 파일을 업로드하세요</div>
+                    </div>
+                </div>
+
+                <div class="stats-bar" id="statsBar">
+                    <div class="stat">
+                        <span class="stat-label">전체 항목:</span>
+                        <span class="stat-value" id="totalFiles">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">수정됨:</span>
+                        <span class="stat-value" id="modifiedFiles">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">추가:</span>
+                        <span class="stat-value" id="totalAdded">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">삭제:</span>
+                        <span class="stat-value" id="totalDeleted">0</span>
+                    </div>
+                    <button class="nav-btn" onclick="toggleWhitespaceMode()" id="wsToggleBtn" style="margin-left: auto;">특수문자만 표시</button>
+                    <button class="nav-btn" onclick="toggleLegend()">범례</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ws-legend" id="wsLegend">
+        <div class="ws-legend-title">
+            <span>공백 문자 범례</span>
+            <span class="legend-close" onclick="toggleLegend()">✕</span>
+        </div>
+
+        <div style="background: var(--hover); padding: 0.6rem; border-radius: 6px; margin-bottom: 0.8rem; font-size: 0.75rem;">
+            <strong>현재 모드:</strong> 특수문자만 표시<br>
+            <span style="color: var(--text-soft);">일반 스페이스/탭/개행은 숨김<br>버튼을 눌러 전환하세요</span>
+        </div>
+
+        <div style="max-height: 350px; overflow-y: auto;">
+            <div style="font-weight: 600; margin-top: 0.3rem; margin-bottom: 0.4rem; color: var(--text);">일반 공백 (기본 숨김)</div>
+            <div class="ws-legend-item" style="opacity: 0.5;">
+                <span class="ws ws-normal">·</span>
+                <span>U+0020 스페이스 (가운뎃점)</span>
+            </div>
+            <div class="ws-legend-item" style="opacity: 0.5;">
+                <span class="ws ws-normal">°</span>
+                <span>U+00A0 NBSP (윗점)</span>
+            </div>
+            <div class="ws-legend-item" style="opacity: 0.5;">
+                <span class="ws ws-normal">→</span>
+                <span>U+0009 탭 (화살표)</span>
+            </div>
+            <div class="ws-legend-item" style="opacity: 0.5;">
+                <span class="ws ws-normal">¶</span>
+                <span>U+000A 개행 (단락 기호)</span>
+            </div>
+
+            <div style="font-weight: 600; margin-top: 0.8rem; margin-bottom: 0.4rem; color: var(--text);">⚠️ 보이지 않는 특수 문자</div>
+
+            <div style="background: #f8f0ff; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border-left: 3px solid #cc00cc;">
+                <div style="font-size: 0.75rem; font-weight: 600; color: #8800cc; margin-bottom: 0.3rem;">🚨 이진법 인코딩 (ID 숨김용)</div>
+                <div class="ws-legend-item">
+                    <span class="ws ws-special ws-wj">▫</span>
+                    <span>U+2060 Word joiner (작은 흰 박스)</span>
+                </div>
+                <div class="ws-legend-item">
+                    <span class="ws ws-special ws-is">▪</span>
+                    <span>U+2063 Invisible Separator (작은 검은 박스)</span>
+                </div>
+            </div>
+
+            <div class="ws-legend-item">
+                <span class="ws ws-special ws-zwsp">·</span>
+                <span>U+200B Zero-width space (점)</span>
+            </div>
+            <div class="ws-legend-item">
+                <span class="ws ws-special ws-zwnj">·</span>
+                <span>U+200C Zero-width non-joiner (점)</span>
+            </div>
+            <div class="ws-legend-item">
+                <span class="ws ws-special ws-zwj">·</span>
+                <span>U+200D Zero-width joiner (점)</span>
+            </div>
+            <div class="ws-legend-item">
+                <span class="ws ws-special ws-shy">-</span>
+                <span>U+00AD Soft hyphen (하이픈)</span>
+            </div>
+            <div class="ws-legend-item">
+                <span class="ws ws-special ws-em">□</span>
+                <span>U+3000 전각 스페이스 (박스)</span>
+            </div>
+            <div style="margin-top: 0.5rem; padding: 0.5rem; background: var(--hover); border-radius: 4px; font-size: 0.75rem;">
+                💡 작은 점/박스는 원래 보이지 않는 문자입니다.<br>
+                마우스를 올리면 정확한 유니코드 정보를 볼 수 있습니다.
+            </div>
+        </div>
+
+        <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--border); font-size: 0.7rem; color: var(--text-soft);">
+            💡 각 문자에 마우스를 올리면 유니코드 정보가 표시됩니다
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <div class="loading-text">분석 중...</div>
+        </div>
+    </div>
+
+    <script>
+        let file1 = null, file2 = null;
+        let name1 = '', name2 = '';
+        let files1 = {}, files2 = {};
+        let allFiles = [];
+        let currentFile = null;
+        let diffMarkers = [];
+        let currentDiffIndex = 0;
+
+        async function handleFile(num, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const btn = document.getElementById(`uploadBtn${num}`);
+            const nameEl = document.getElementById(`fileName${num}`);
+
+            btn.classList.add('active');
+            nameEl.textContent = file.name;
+
+            if (num === 1) {
+                file1 = file;
+                name1 = file.name;
+            } else {
+                file2 = file;
+                name2 = file.name;
+            }
+
+            if (file1 && file2) {
+                await compareFiles();
+            }
+        }
+
+        // ---------- ZIP 추출 ----------
+
+        async function extractFiles(file) {
+            const zip = new JSZip();
+            const contents = await zip.loadAsync(file);
+            const result = {};
+
+            const imageExts = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i;
+
+            for (const [path, zipFile] of Object.entries(contents.files)) {
+                if (zipFile.dir) continue;
+
+                if (imageExts.test(path)) {
+                    const base64 = await zipFile.async('base64');
+                    result[path] = {
+                        text: base64,
+                        date: zipFile.date,
+                        isImage: true,
+                        size: base64.length
+                    };
+                } else {
+                    const content = await zipFile.async('text');
+                    result[path] = {
+                        text: content,
+                        date: zipFile.date,
+                        isImage: false,
+                        size: content.length
+                    };
+                }
+            }
+
+            return result;
+        }
+
+        function getFileName(path) {
+            return path.split('/').pop();
+        }
+
+        function getFolder(path) {
+            const parts = path.split('/');
+            return parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+        }
+
+        // ---------- spine/NCX 읽기 순서 파악 ----------
+
+        function parseXml(str) {
+            const doc = new DOMParser().parseFromString(str, 'application/xml');
+            if (doc.querySelector('parsererror')) return null;
+            return doc;
+        }
+
+        function resolveRelPath(baseDir, href) {
+            href = (href || '').split('#')[0];
+            if (!href) return null;
+            if (baseDir) {
+                const parts = baseDir.split('/').filter(Boolean);
+                href.split('/').forEach(part => {
+                    if (part === '' || part === '.') return;
+                    if (part === '..') parts.pop();
+                    else parts.push(part);
+                });
+                return parts.join('/');
+            }
+            return href.replace(/^\.\//, '');
+        }
+
+        // OPF manifest+spine 기준 읽기 순서 (가장 신뢰도 높음: 모든 본문 문서 포함)
+        function getSpineOrder(filesObj) {
+            const container = filesObj['META-INF/container.xml'];
+            if (!container) return null;
+            const cdoc = parseXml(container.text);
+            if (!cdoc) return null;
+            const rootfile = cdoc.querySelector('rootfile');
+            const opfPath = rootfile ? rootfile.getAttribute('full-path') : null;
+            if (!opfPath || !filesObj[opfPath]) return null;
+
+            const opfDoc = parseXml(filesObj[opfPath].text);
+            if (!opfDoc) return null;
+            const opfDir = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/')) : '';
+
+            const manifest = {};
+            opfDoc.querySelectorAll('manifest item').forEach(item => {
+                manifest[item.getAttribute('id')] = item.getAttribute('href');
+            });
+
+            const order = [];
+            const seen = new Set();
+            opfDoc.querySelectorAll('spine itemref').forEach(itemref => {
+                const idref = itemref.getAttribute('idref');
+                const href = manifest[idref];
+                if (!href) return;
+                const resolved = resolveRelPath(opfDir, href);
+                if (resolved && filesObj[resolved] && !seen.has(resolved)) {
+                    seen.add(resolved);
+                    order.push(resolved);
+                }
+            });
+            return order.length ? order : null;
+        }
+
+        // toc.ncx navMap 기준 읽기 순서 (spine을 못 찾았을 때 대체)
+        function getNcxOrder(filesObj) {
+            const ncxPath = Object.keys(filesObj).find(p => p.toLowerCase().endsWith('.ncx'));
+            if (!ncxPath) return null;
+            const doc = parseXml(filesObj[ncxPath].text);
+            if (!doc) return null;
+            const ncxDir = ncxPath.includes('/') ? ncxPath.slice(0, ncxPath.lastIndexOf('/')) : '';
+
+            const order = [];
+            const seen = new Set();
+            doc.querySelectorAll('navMap navPoint content').forEach(content => {
+                const resolved = resolveRelPath(ncxDir, content.getAttribute('src'));
+                if (resolved && filesObj[resolved] && !seen.has(resolved)) {
+                    seen.add(resolved);
+                    order.push(resolved);
+                }
+            });
+            return order.length ? order : null;
+        }
+
+        const HTML_RE = /\.(x?html?|htm)$/i;
+
+        function getHtmlReadingOrder(filesObj) {
+            const allHtml = Object.keys(filesObj).filter(p => HTML_RE.test(p) && !filesObj[p].isImage);
+            let order = getSpineOrder(filesObj) || getNcxOrder(filesObj) || [];
+            order = order.filter(p => HTML_RE.test(p));
+
+            // spine/ncx에 없는 남은 html은 경로순으로 뒤에 붙임 (누락 방지)
+            const used = new Set(order);
+            const orphans = allHtml.filter(p => !used.has(p)).sort((a, b) => a.localeCompare(b));
+            return { order: order.concat(orphans), source: getSpineOrder(filesObj) ? 'spine' : (getNcxOrder(filesObj) ? 'ncx' : 'fallback') };
+        }
+
+        // ---------- 본문 텍스트만 추출 (태그 제거) ----------
+
+        const BLOCK_TAGS = new Set(['P','DIV','LI','H1','H2','H3','H4','H5','H6','TR','BLOCKQUOTE','SECTION','ARTICLE','TABLE','UL','OL','HR','PRE','FIGURE','FIGCAPTION','HEADER','FOOTER','ASIDE']);
+
+        function extractBodyText(htmlString) {
+            const doc = new DOMParser().parseFromString(htmlString, 'text/html');
+            const root = doc.body || doc.documentElement;
+            let out = '';
+
+            function walk(node) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    out += node.nodeValue;
+                    return;
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) return;
+                const tag = node.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE') return;
+                if (tag === 'BR') { out += '\n'; return; }
+                if (tag === 'IMG') {
+                    const alt = node.getAttribute('alt');
+                    if (alt) out += `[이미지:${alt}]`;
+                    return;
+                }
+                for (const child of node.childNodes) walk(child);
+                if (BLOCK_TAGS.has(tag) && !out.endsWith('\n')) out += '\n';
+            }
+
+            walk(root);
+            return out;
+        }
+
+        // ---------- 비교 ----------
+
+        async function compareFiles() {
+            document.getElementById('loading').style.display = 'flex';
+
+            try {
+                files1 = await extractFiles(file1);
+                files2 = await extractFiles(file2);
+
+                const html1 = getHtmlReadingOrder(files1);
+                const html2 = getHtmlReadingOrder(files2);
+
+                const htmlEntries = buildHtmlEntries(html1.order, html2.order);
+                const otherEntries = buildOtherEntries(files1, files2, html1.order.concat(), html2.order.concat());
+
+                allFiles = [...htmlEntries, ...otherEntries];
+
+                let totalMod = 0, totalAdd = 0, totalDel = 0;
+                allFiles.forEach(f => {
+                    if (f.modified) totalMod++;
+                    totalAdd += f.added || 0;
+                    totalDel += f.deleted || 0;
+                });
+
+                displayTree();
+                updateStats(allFiles.length, totalMod, totalAdd, totalDel);
+
+                document.getElementById('sidebar').classList.add('show');
+                document.getElementById('statsBar').classList.add('show');
+                document.getElementById('loading').style.display = 'none';
+
+                if (allFiles.length > 0) {
+                    setTimeout(() => {
+                        const firstItem = document.querySelector('.tree-item');
+                        if (firstItem) firstItem.click();
+                    }, 100);
+                }
+
+            } catch (error) {
+                alert('오류: ' + error.message);
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // 각 책 자신의 읽기 순서 인덱스끼리 짝짓기 (파일명 무시)
+        function buildHtmlEntries(order1, order2) {
+            const n = Math.max(order1.length, order2.length);
+            const entries = [];
+
+            for (let i = 0; i < n; i++) {
+                const p1 = order1[i] || null;
+                const p2 = order2[i] || null;
+
+                const raw1 = p1 ? files1[p1].text : '';
+                const raw2 = p2 ? files2[p2].text : '';
+                const plain1 = p1 ? extractBodyText(raw1) : '';
+                const plain2 = p2 ? extractBodyText(raw2) : '';
+
+                if (p1 && p2) {
+                    const dmp = new diff_match_patch();
+                    const diffs = dmp.diff_main(plain1, plain2);
+                    dmp.diff_cleanupSemantic(diffs);
+                    let add = 0, del = 0;
+                    diffs.forEach(([op, text]) => {
+                        if (op === 1) add += text.length;
+                        else if (op === -1) del += text.length;
+                    });
+                    const modified = add > 0 || del > 0;
+
+                    entries.push({
+                        key: 'html-' + i,
+                        type: 'html',
+                        order: i,
+                        path1: p1, path2: p2,
+                        name: `${i + 1}. ${getFileName(p1)}${getFileName(p1) !== getFileName(p2) ? ' ↔ ' + getFileName(p2) : ''}`,
+                        folder: '',
+                        matched: true,
+                        renamed: p1 !== p2,
+                        modified,
+                        added: add, deleted: del,
+                        date1: files1[p1].date, date2: files2[p2].date,
+                        text1: plain1, text2: plain2,
+                        isImage: false
+                    });
+                } else {
+                    const side = p1 ? 1 : 2;
+                    const p = p1 || p2;
+                    entries.push({
+                        key: 'html-' + i,
+                        type: 'html',
+                        order: i,
+                        path1: p1, path2: p2,
+                        name: `${i + 1}. ${getFileName(p)}`,
+                        folder: '',
+                        matched: false,
+                        onlyIn: side,
+                        modified: true,
+                        added: side === 2 ? plain2.length : 0,
+                        deleted: side === 1 ? plain1.length : 0,
+                        date1: p1 ? files1[p1].date : null,
+                        date2: p2 ? files2[p2].date : null,
+                        text1: plain1, text2: plain2,
+                        isImage: false
+                    });
+                }
+            }
+
+            return entries;
+        }
+
+        // 본문 html이 아닌 나머지 파일들(css/opf/ncx/이미지 등)은 경로 기준으로 그대로 비교
+        function buildOtherEntries(files1, files2, htmlPaths1, htmlPaths2) {
+            const htmlSet1 = new Set(htmlPaths1), htmlSet2 = new Set(htmlPaths2);
+            const paths1 = Object.keys(files1).filter(p => !htmlSet1.has(p));
+            const paths2 = Object.keys(files2).filter(p => !htmlSet2.has(p));
+            const allPaths = new Set([...paths1, ...paths2]);
+            const set1 = new Set(paths1), set2 = new Set(paths2);
+            const entries = [];
+
+            for (const path of allPaths) {
+                const f1 = files1[path], f2 = files2[path];
+                const inBoth = set1.has(path) && set2.has(path);
+
+                if (!inBoth) {
+                    const present = f1 || f2;
+                    entries.push({
+                        key: 'other-' + path,
+                        type: 'other',
+                        path1: f1 ? path : null,
+                        path2: f2 ? path : null,
+                        name: getFileName(path),
+                        folder: getFolder(path),
+                        matched: false,
+                        onlyIn: !f1 ? 2 : 1,
+                        modified: true,
+                        added: !f1 ? (f2.text?.length || 0) : 0,
+                        deleted: !f2 ? (f1.text?.length || 0) : 0,
+                        date1: f1?.date, date2: f2?.date,
+                        isImage: present.isImage,
+                        text1: f1 ? f1.text : '', text2: f2 ? f2.text : ''
+                    });
+                    continue;
+                }
+
+                if (f1.isImage && f2.isImage) {
+                    const modified = f1.text !== f2.text;
+                    entries.push({
+                        key: 'other-' + path,
+                        type: 'other',
+                        path1: path, path2: path,
+                        name: getFileName(path),
+                        folder: getFolder(path),
+                        matched: true,
+                        modified,
+                        isImage: true,
+                        added: 0, deleted: 0,
+                        date1: f1.date, date2: f2.date,
+                        size1: f1.size, size2: f2.size
+                    });
+                    continue;
+                }
+
+                const dmp = new diff_match_patch();
+                const diffs = dmp.diff_main(f1.text, f2.text);
+                dmp.diff_cleanupSemantic(diffs);
+                let add = 0, del = 0;
+                diffs.forEach(([op, text]) => {
+                    if (op === 1) add += text.length;
+                    else if (op === -1) del += text.length;
+                });
+                const modified = add > 0 || del > 0;
+
+                entries.push({
+                    key: 'other-' + path,
+                    type: 'other',
+                    path1: path, path2: path,
+                    name: getFileName(path),
+                    folder: getFolder(path),
+                    matched: true,
+                    modified,
+                    added: add, deleted: del,
+                    date1: f1.date, date2: f2.date,
+                    isImage: false,
+                    text1: f1.text, text2: f2.text
+                });
+            }
+
+            return entries;
+        }
+
+        // ---------- 화면 표시 ----------
+
+        function displayTree() {
+            const container = document.getElementById('treeContainer');
+
+            const htmlItems = allFiles.filter(f => f.type === 'html');
+            const otherGrouped = {};
+            allFiles.filter(f => f.type === 'other').forEach(f => {
+                const folder = f.folder || 'root';
+                if (!otherGrouped[folder]) otherGrouped[folder] = [];
+                otherGrouped[folder].push(f);
+            });
+
+            let html = '';
+
+            if (htmlItems.length) {
+                html += `<div class="folder-item">📖 본문 (읽기 순서)</div>`;
+                htmlItems.forEach(f => {
+                    html += renderTreeItem(f);
+                });
+            }
+
+            for (const [folder, files] of Object.entries(otherGrouped)) {
+                html += `<div class="folder-item">📁 ${folder === 'root' ? '기타' : folder}</div>`;
+                files.forEach(f => {
+                    html += renderTreeItem(f);
+                });
+            }
+
+            container.innerHTML = html;
+            document.getElementById('fileCount').textContent = `${allFiles.length}개 항목`;
+
+            document.querySelectorAll('.tree-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    selectFile(this.getAttribute('data-key'));
+                });
+            });
+        }
+
+        function renderTreeItem(f) {
+            const icon = getFileIcon(f);
+            let badge = '';
+            if (!f.matched) {
+                badge = `<span class="file-badge">${f.onlyIn === 1 ? '1에만' : '2에만'}</span>`;
+            } else if (f.renamed) {
+                badge = `<span class="file-badge rename">이름다름</span>`;
+            } else if (f.modified) {
+                badge = `<span class="file-badge">수정</span>`;
+            }
+            const sub = f.type === 'html' && f.matched && f.renamed
+                ? `<div class="file-sub">${f.path1} ↔ ${f.path2}</div>` : '';
+            return `
+                <div class="tree-item ${f.modified ? 'modified' : ''}" data-key="${f.key}">
+                    <span class="file-icon">${icon}</span>
+                    <div style="flex:1; min-width:0;">
+                        <span class="file-name">${f.name}</span>
+                        ${sub}
+                    </div>
+                    ${badge}
+                </div>
+            `;
+        }
+
+        function getFileIcon(file) {
+            if (file.isImage) return '🖼️';
+            if (file.type === 'html') return '📝';
+            if (file.name.endsWith('.opf')) return '📋';
+            if (file.name.endsWith('.ncx')) return '📑';
+            if (file.name.endsWith('.css')) return '🎨';
+            if (file.name.endsWith('.xml')) return '📄';
+            return '📄';
+        }
+
+        function selectFile(key) {
+            currentFile = allFiles.find(f => f.key === key);
+            if (!currentFile) return;
+
+            document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`.tree-item[data-key="${key}"]`)?.classList.add('selected');
+
+            displayFileComparison();
+        }
+
+        function displayFileComparison() {
+            document.getElementById('contentHeader').classList.add('show');
+            document.getElementById('currentFileName').textContent = currentFile.name;
+
+            const date1Str = currentFile.date1 ? new Date(currentFile.date1).toLocaleString('ko-KR') : '없음';
+            const date2Str = currentFile.date2 ? new Date(currentFile.date2).toLocaleString('ko-KR') : '없음';
+
+            let extra = '';
+            if (currentFile.type === 'html') {
+                extra = `<div class="meta-item">1: ${currentFile.path1 || '❌ 없음'}</div><div class="meta-item">2: ${currentFile.path2 || '❌ 없음'}</div>`;
+                if (!currentFile.matched) {
+                    extra += `<div class="meta-item">⚠️ ${currentFile.onlyIn === 1 ? '파일1에만 존재 (파일2에 대응하는 순서 항목 없음)' : '파일2에만 존재 (파일1에 대응하는 순서 항목 없음)'}</div>`;
+                }
+            } else {
+                extra = `<div class="meta-item">📖 ${date1Str}</div><div class="meta-item">📕 ${date2Str}</div>`;
+            }
+
+            document.getElementById('fileMeta').innerHTML = extra;
+
+            const view = document.getElementById('viewArea');
+
+            if (!currentFile.matched) {
+                const content = currentFile.onlyIn === 1 ? currentFile.text1 : currentFile.text2;
+                const displayContent = currentFile.isImage ? '[이미지 파일]' : visualizeWhitespace(content || '');
+
+                view.innerHTML = `
+                    <div class="comparison-grid">
+                        <div class="pane">
+                            <div class="pane-header"><div class="pane-title">${name1}</div></div>
+                            <div class="diff-text">${currentFile.onlyIn === 1 ? displayContent : '❌ 대응 항목 없음'}</div>
+                        </div>
+                        <div class="pane">
+                            <div class="pane-header"><div class="pane-title">${name2}</div></div>
+                            <div class="diff-text">${currentFile.onlyIn === 2 ? displayContent : '❌ 대응 항목 없음'}</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('diffNav').style.display = 'none';
+                return;
+            }
+
+            if (currentFile.isImage) {
+                const mimeType = getImageMimeType(currentFile.name);
+                const img1 = files1[currentFile.path1]?.text ?
+                    `<img src="data:${mimeType};base64,${files1[currentFile.path1].text}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />` :
+                    '❌ 파일 없음';
+                const img2 = files2[currentFile.path2]?.text ?
+                    `<img src="data:${mimeType};base64,${files2[currentFile.path2].text}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />` :
+                    '❌ 파일 없음';
+
+                view.innerHTML = `
+                    <div class="comparison-grid">
+                        <div class="pane">
+                            <div class="pane-header"><div class="pane-title">${name1}</div></div>
+                            <div class="diff-text">${img1}</div>
+                        </div>
+                        <div class="pane">
+                            <div class="pane-header"><div class="pane-title">${name2}</div></div>
+                            <div class="diff-text">${img2}</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('diffNav').style.display = 'none';
+                return;
+            }
+
+            if (!currentFile.modified) {
+                view.innerHTML = `
+                    <div class="comparison-grid">
+                        <div class="pane">
+                            <div class="pane-header"><div class="pane-title">${name1}</div></div>
+                            <div class="diff-text">${visualizeWhitespace(currentFile.text1 || '내용 없음')}</div>
+                        </div>
+                        <div class="pane">
+                            <div class="pane-header"><div class="pane-title">${name2}</div></div>
+                            <div class="diff-text">${visualizeWhitespace(currentFile.text2 || '내용 없음')}</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('diffNav').style.display = 'none';
+                return;
+            }
+
+            const text1 = currentFile.text1 || '';
+            const text2 = currentFile.text2 || '';
+
+            let leftHtml = '', rightHtml = '';
+            diffMarkers = [];
+            let markerIndex = 0;
+
+            const dmp = new diff_match_patch();
+            const lineDiffs = dmp.diff_main(text1, text2);
+            dmp.diff_cleanupSemantic(lineDiffs);
+
+            for (let diff of lineDiffs) {
+                const [op, text] = diff;
+                const diffLines = text.split('\n');
+
+                if (op === 0) {
+                    for (let j = 0; j < diffLines.length; j++) {
+                        if (j > 0) {
+                            leftHtml += visualizeWhitespace('\n');
+                            rightHtml += visualizeWhitespace('\n');
+                        }
+                        leftHtml += visualizeWhitespace(diffLines[j]);
+                        rightHtml += visualizeWhitespace(diffLines[j]);
+                    }
+                } else if (op === -1) {
+                    for (let j = 0; j < diffLines.length; j++) {
+                        if (j > 0) leftHtml += visualizeWhitespace('\n');
+                        if (diffLines[j].trim().length > 0 || j === diffLines.length - 1) {
+                            leftHtml += `<span class="removed diff-marker" id="diff-${markerIndex}">${visualizeWhitespace(diffLines[j])}</span>`;
+                            diffMarkers.push(markerIndex);
+                            markerIndex++;
+                        } else {
+                            leftHtml += visualizeWhitespace(diffLines[j]);
+                        }
+                    }
+                } else if (op === 1) {
+                    for (let j = 0; j < diffLines.length; j++) {
+                        if (j > 0) rightHtml += visualizeWhitespace('\n');
+                        if (diffLines[j].trim().length > 0 || j === diffLines.length - 1) {
+                            rightHtml += `<span class="added diff-marker" id="diff-${markerIndex}">${visualizeWhitespace(diffLines[j])}</span>`;
+                            diffMarkers.push(markerIndex);
+                            markerIndex++;
+                        } else {
+                            rightHtml += visualizeWhitespace(diffLines[j]);
+                        }
+                    }
+                }
+            }
+
+            view.innerHTML = `
+                <div class="comparison-grid">
+                    <div class="pane">
+                        <div class="pane-header">
+                            <div class="pane-title">${name1} (삭제)</div>
+                            <div class="pane-path">${currentFile.path1}</div>
+                        </div>
+                        <div class="diff-text">${leftHtml}</div>
+                    </div>
+                    <div class="pane">
+                        <div class="pane-header">
+                            <div class="pane-title">${name2} (추가)</div>
+                            <div class="pane-path">${currentFile.path2}</div>
+                        </div>
+                        <div class="diff-text">${rightHtml}</div>
+                    </div>
+                </div>
+            `;
+
+            currentDiffIndex = 0;
+            updateDiffNav();
+            document.getElementById('diffNav').style.display = 'flex';
+        }
+
+        function updateDiffNav() {
+            document.getElementById('diffCount').textContent =
+                diffMarkers.length > 0 ? `${currentDiffIndex + 1}/${diffMarkers.length}` : '0/0';
+        }
+
+        function nextDiff() {
+            if (currentDiffIndex < diffMarkers.length - 1) {
+                currentDiffIndex++;
+                scrollToDiff();
+            }
+        }
+
+        function prevDiff() {
+            if (currentDiffIndex > 0) {
+                currentDiffIndex--;
+                scrollToDiff();
+            }
+        }
+
+        function scrollToDiff() {
+            const marker = document.getElementById(`diff-${diffMarkers[currentDiffIndex]}`);
+            if (marker) {
+                marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            updateDiffNav();
+        }
+
+        function updateStats(total, modified, added, deleted) {
+            document.getElementById('totalFiles').textContent = total;
+            document.getElementById('modifiedFiles').textContent = modified;
+            document.getElementById('totalAdded').textContent = formatNum(added);
+            document.getElementById('totalDeleted').textContent = formatNum(deleted);
+        }
+
+        function formatNum(n) {
+            return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : n.toString();
+        }
+
+        function getImageMimeType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const mimeTypes = {
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'png': 'image/png',
+                'gif': 'image/gif',
+                'webp': 'image/webp',
+                'svg': 'image/svg+xml',
+                'bmp': 'image/bmp'
+            };
+            return mimeTypes[ext] || 'image/png';
+        }
+
+        let whitespaceMode = 'special'; // 'all', 'special', 'none'
+
+        function toggleWhitespaceMode() {
+            const btn = document.getElementById('wsToggleBtn');
+            const body = document.body;
+
+            if (whitespaceMode === 'special') {
+                whitespaceMode = 'all';
+                body.classList.remove('hide-whitespace');
+                body.classList.remove('hide-all-whitespace');
+                btn.textContent = '모두 표시';
+            } else if (whitespaceMode === 'all') {
+                whitespaceMode = 'none';
+                body.classList.add('hide-all-whitespace');
+                btn.textContent = '숨기기';
+            } else {
+                whitespaceMode = 'special';
+                body.classList.remove('hide-all-whitespace');
+                body.classList.add('hide-whitespace');
+                btn.textContent = '특수문자만 표시';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('hide-whitespace');
+
+            document.addEventListener('click', function(e) {
+                const legend = document.getElementById('wsLegend');
+                const legendBtn = e.target.closest('.nav-btn');
+
+                if (legend.classList.contains('show') &&
+                    !legend.contains(e.target) &&
+                    (!legendBtn || legendBtn.textContent !== '범례')) {
+                    legend.classList.remove('show');
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const legend = document.getElementById('wsLegend');
+                    if (legend.classList.contains('show')) {
+                        legend.classList.remove('show');
+                    }
+                }
+            });
+        });
+
+        function toggleLegend() {
+            const legend = document.getElementById('wsLegend');
+            legend.classList.toggle('show');
+        }
+
+        function visualizeWhitespace(text) {
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const code = char.charCodeAt(0);
+
+                if (char === '<') {
+                    result += '&lt;';
+                } else if (char === '>') {
+                    result += '&gt;';
+                } else if (char === '&') {
+                    result += '&amp;';
+                } else if (char === '"') {
+                    result += '&quot;';
+                } else if (char === "'") {
+                    result += '&#39;';
+                }
+                else if (code === 0x0020) {
+                    result += `<span class="ws ws-normal ws-space" data-code="U+0020 SPACE" title="U+0020 일반 스페이스">·</span>`;
+                } else if (code === 0x00A0) {
+                    result += `<span class="ws ws-normal ws-nbsp" data-code="U+00A0 NBSP" title="U+00A0 Non-breaking space">°</span>`;
+                } else if (code === 0x0009) {
+                    result += `<span class="ws ws-normal ws-tab" data-code="U+0009 TAB" title="U+0009 탭">→</span>`;
+                }
+                else if (code === 0x000A) {
+                    if (i > 0 && text.charCodeAt(i - 1) === 0x000D) {
+                        // CRLF의 LF 부분
+                    } else {
+                        result += `<span class="ws ws-normal ws-newline" data-code="U+000A LF" title="U+000A 개행 (LF)">¶</span>\n`;
+                    }
+                } else if (code === 0x000D) {
+                    if (i + 1 < text.length && text.charCodeAt(i + 1) === 0x000A) {
+                        result += `<span class="ws ws-normal ws-crlf" data-code="U+000D+000A CRLF" title="U+000D+000A CRLF">¶</span>\n`;
+                        i++;
+                    } else {
+                        result += `<span class="ws ws-normal ws-cr" data-code="U+000D CR" title="U+000D 캐리지 리턴">↵</span>`;
+                    }
+                }
+                else if (code === 0x200B) {
+                    result += `<span class="ws ws-special ws-zwsp" data-code="U+200B ZWSP" title="U+200B Zero-width space">·</span>`;
+                } else if (code === 0x200C) {
+                    result += `<span class="ws ws-special ws-zwnj" data-code="U+200C ZWNJ" title="U+200C Zero-width non-joiner">·</span>`;
+                } else if (code === 0x200D) {
+                    result += `<span class="ws ws-special ws-zwj" data-code="U+200D ZWJ" title="U+200D Zero-width joiner">·</span>`;
+                }
+                else if (code === 0x2060) {
+                    result += `<span class="ws ws-special ws-wj" data-code="U+2060 WJ" title="U+2060 Word joiner (이진법 인코딩)">▫</span>`;
+                } else if (code === 0x2063) {
+                    result += `<span class="ws ws-special ws-is" data-code="U+2063 IS" title="U+2063 Invisible Separator (이진법 인코딩)">▪</span>`;
+                }
+                else if (code === 0xFEFF) {
+                    result += `<span class="ws ws-special ws-zwsp" data-code="U+FEFF BOM" title="U+FEFF BOM">◦</span>`;
+                } else if (code === 0x00AD) {
+                    result += `<span class="ws ws-special ws-shy" data-code="U+00AD SHY" title="U+00AD Soft hyphen">-</span>`;
+                } else if (code === 0x034F) {
+                    result += `<span class="ws ws-special ws-cgj" data-code="U+034F CGJ" title="U+034F Combining grapheme joiner">·</span>`;
+                } else if (code === 0x180E) {
+                    result += `<span class="ws ws-special ws-zwsp" data-code="U+180E MVS" title="U+180E Mongolian vowel separator">·</span>`;
+                } else if (code === 0x061C) {
+                    result += `<span class="ws ws-special ws-zwsp" data-code="U+061C ALM" title="U+061C Arabic letter mark">·</span>`;
+                }
+                else if (code === 0x3000) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+3000 EM-SPACE" title="U+3000 전각 스페이스">□</span>`;
+                } else if (code === 0x3164) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+3164 HANGUL" title="U+3164 한글 채움 문자">□</span>`;
+                } else if (code === 0xFFA0) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+FFA0 HW-SPACE" title="U+FFA0 Halfwidth Hangul space">□</span>`;
+                } else if (code === 0x115F) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+115F CHOSEONG" title="U+115F Hangul Choseong Filler">□</span>`;
+                } else if (code === 0x1160) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+1160 JUNGSEONG" title="U+1160 Hangul Jungseong Filler">□</span>`;
+                } else if (code === 0x2003) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+2003 EM-SPACE" title="U+2003 Em space">□</span>`;
+                } else if (code === 0x2002) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+2002 EN-SPACE" title="U+2002 En space">□</span>`;
+                } else if (code === 0x2004) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+2004 3/EM" title="U+2004 Three-per-em space">□</span>`;
+                } else if (code === 0x2005) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+2005 4/EM" title="U+2005 Four-per-em space">□</span>`;
+                } else if (code === 0x2006) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+2006 6/EM" title="U+2006 Six-per-em space">□</span>`;
+                } else if (code === 0x2009) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+2009 THIN" title="U+2009 Thin space">□</span>`;
+                } else if (code === 0x200A) {
+                    result += `<span class="ws ws-special ws-em" data-code="U+200A HAIR" title="U+200A Hair space">□</span>`;
+                } else {
+                    result += char;
+                }
+            }
+            return result;
+        }
+    </script>
+</body>
+</html>
