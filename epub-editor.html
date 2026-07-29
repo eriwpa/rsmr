@@ -2015,7 +2015,7 @@
 
     for(const path in files) {
       const options = {};
-      options.date = (!modifiedFiles.has(path) && fileTimestamps[path]) ? fileTimestamps[path] : new Date();
+      options.date = fileTimestamps[path] || new Date();
       if(path === 'mimetype') {
         options.compression = 'STORE';
       } else {
@@ -2032,7 +2032,6 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = currentFileName; a.click();
     URL.revokeObjectURL(url);
-    modifiedFiles.forEach(path => { fileTimestamps[path] = new Date(); });
     modifiedFiles.clear();
     renderTabs(); renderFileTree(); updateStatus();
   }
