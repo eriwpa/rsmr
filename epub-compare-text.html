@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPUB 순수 텍스트 비교</title>
+    <title>EPUB(TXT) 순수 텍스트 비교 👻</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
     <style>
@@ -31,6 +31,8 @@
             --hover: #f5f2fb;
             --highlight-bg: #f9ffac;
             --highlight-text: #1a1a1a;
+            --reflow-bg: #f4effc;
+            --reflow-text: #8a6fd1;
         }
 
         body {
@@ -245,6 +247,19 @@
             box-shadow: inset 4px 0 0 var(--teal);
         }
 
+        .compare-row.row-reflow {
+            background: var(--reflow-bg);
+        }
+
+        .reflow-marker {
+            padding: 0.15rem 1.2rem;
+            text-align: center;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--reflow-text);
+            background: var(--reflow-bg);
+        }
+
         .collapsed-divider {
             padding: 0.15rem 1.2rem;
             text-align: center;
@@ -340,6 +355,7 @@
         .swatch-highlight { background: var(--highlight-bg); border: 1px solid var(--highlight-text); }
         .swatch-current { background: var(--teal); border: 1px solid var(--teal); }
         .swatch-watermark { background: #d4ffd1; border: 1px solid #4caf50; }
+        .swatch-reflow { background: var(--reflow-bg); border: 1px solid var(--reflow-text); }
 
         .empty-state {
             display: flex;
@@ -538,6 +554,7 @@
                 <span class="legend-item"><span class="legend-swatch swatch-highlight"></span>차이점</span>
                 <span class="legend-item"><span class="legend-swatch swatch-current"></span>현재 위치</span>
                 <span class="legend-item"><span class="legend-swatch swatch-watermark"></span>공백 코드</span>
+                <span class="legend-item"><span class="legend-swatch swatch-reflow"></span>문단 재구성(내용 동일)</span>
             </div>
         </div>
 
@@ -835,6 +852,16 @@
             return ops.reverse();
         }
 
+        // 워터마크/공백 차이만 제외하고 이어붙인 본문이 완전히 같은지 비교하기 위한 정규화.
+        function joinNormalized(lines) {
+            return lines.map(stripWatermarkChars).join(' ').replace(/\s+/g, ' ').trim();
+        }
+
+        // 삭제/추가가 뒤섞인 구간(hunk)은 문단 개수가 달라질 수 있다(병합/분리/문장 이동).
+        // 문단을 1:1로 억지로 짝지으면 실제로는 같은 내용인데 위치만 바뀐 부분이 "없음"으로
+        // 잘못 표시된다. 그래서 문단 경계로 나누지 않고 hunk 전체를 한 덩어리의 텍스트로
+        // 이어붙여 문자 단위로 비교한다 - 문단이 어떻게 재배치됐든 diff_match_patch가
+        // 공통 부분을 알아서 정렬해 실제로 달라진 글자만 잡아낸다.
         function buildParagraphDiff(paragraphsA, paragraphsB) {
             const ops = myersDiff(paragraphsA, paragraphsB, stripWatermarkChars);
             const rows = [];
@@ -854,15 +881,13 @@
                     i++;
                 }
 
-                const pairCount = Math.min(delLines.length, insLines.length);
-                for (let k = 0; k < pairCount; k++) {
-                    rows.push({ type: 'changed', left: delLines[k], right: insLines[k] });
-                }
-                for (let k = pairCount; k < delLines.length; k++) {
-                    rows.push({ type: 'removed', left: delLines[k], right: null });
-                }
-                for (let k = pairCount; k < insLines.length; k++) {
-                    rows.push({ type: 'added', left: null, right: insLines[k] });
+                if (delLines.length === 0) {
+                    for (const line of insLines) rows.push({ type: 'added', left: null, right: line });
+                } else if (insLines.length === 0) {
+                    for (const line of delLines) rows.push({ type: 'removed', left: line, right: null });
+                } else {
+                    const isReflow = joinNormalized(delLines) === joinNormalized(insLines);
+                    rows.push({ type: 'block', leftLines: delLines, rightLines: insLines, isReflow });
                 }
             }
             return rows;
@@ -892,14 +917,31 @@
         }
 
         function buildRowHtml(row, idx) {
-            let leftHtml, rightHtml, rowClass;
+            if (row.type === 'block' && row.isReflow) {
+                const leftHtml = row.leftLines.map(renderTextWithWatermarks).join('<br><br>');
+                const rightHtml = row.rightLines.map(renderTextWithWatermarks).join('<br><br>');
+                const leftCellClass = row.leftLines.some(containsWatermark) ? ' cell-watermark' : '';
+                const rightCellClass = row.rightLines.some(containsWatermark) ? ' cell-watermark' : '';
+
+                return `<div class="reflow-marker">◆ 문단 병합/분리됨 (내용 동일)</div>
+            <div class="compare-row row-reflow" id="row-${idx}">
+                <div class="compare-cell${leftCellClass}">${leftHtml}</div>
+                <div class="compare-cell${rightCellClass}">${rightHtml}</div>
+            </div>`;
+            }
+
+            let leftHtml, rightHtml, rowClass, leftRaw, rightRaw;
 
             if (row.type === 'match') {
                 leftHtml = renderTextWithWatermarks(row.left);
                 rightHtml = renderTextWithWatermarks(row.right);
                 rowClass = 'row-match';
-            } else if (row.type === 'changed') {
-                const rendered = renderChangedPair(row.left, row.right);
+                leftRaw = row.left;
+                rightRaw = row.right;
+            } else if (row.type === 'block') {
+                leftRaw = row.leftLines.join('\n\n');
+                rightRaw = row.rightLines.join('\n\n');
+                const rendered = renderChangedPair(leftRaw, rightRaw);
                 leftHtml = rendered.left;
                 rightHtml = rendered.right;
                 rowClass = 'row-changed';
@@ -907,14 +949,16 @@
                 leftHtml = `<span class="text-unique-left">${renderTextWithWatermarks(row.left)}</span>`;
                 rightHtml = `<span class="placeholder-empty">(파일 B에 없음)</span>`;
                 rowClass = 'row-removed';
+                leftRaw = row.left;
             } else {
                 leftHtml = `<span class="placeholder-empty">(파일 A에 없음)</span>`;
                 rightHtml = `<span class="text-unique-right">${renderTextWithWatermarks(row.right)}</span>`;
                 rowClass = 'row-added';
+                rightRaw = row.right;
             }
 
-            const leftCellClass = containsWatermark(row.left) ? ' cell-watermark' : '';
-            const rightCellClass = containsWatermark(row.right) ? ' cell-watermark' : '';
+            const leftCellClass = containsWatermark(leftRaw) ? ' cell-watermark' : '';
+            const rightCellClass = containsWatermark(rightRaw) ? ' cell-watermark' : '';
 
             return `<div class="compare-row ${rowClass}" id="row-${idx}">
                 <div class="compare-cell${leftCellClass}">${leftHtml}</div>
@@ -959,7 +1003,9 @@
             lastCurrentRowIdx = null;
 
             rows.forEach((row, idx) => {
-                if (row.type !== 'match') mismatchIndices.push(idx);
+                if (row.type === 'match') return;
+                if (row.type === 'block' && row.isReflow) return;
+                mismatchIndices.push(idx);
             });
 
             const emptyHtml = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">두 파일의 문단 내용이 동일합니다</div></div>`;
