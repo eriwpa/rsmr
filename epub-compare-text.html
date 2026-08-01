@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPUB 텍스트 비교 (순서 매칭)</title>
+    <title>EPUB 순수 텍스트 비교</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
     <style>
@@ -22,14 +22,15 @@
             --text: #3d4451;
             --text-soft: #8890a0;
             --pink: #ffb3d1;
-            --blue: #a8d5ff;
             --purple: #d4c5f9;
-            --add-bg: #f0f9ff;
-            --add-text: #5b9fd1;
-            --remove-bg: #fff5f8;
-            --remove-text: #d18ba0;
-            --hover: #f5f7fb;
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --teal: #ff86a1;
+            --add-text: #1565c0;
+            --remove-text: #0f8d66;
+            --added-bg: #eef5fc;
+            --removed-bg: #eefcf2;
+            --hover: #f5f2fb;
+            --highlight-bg: #f9ffac;
+            --highlight-text: #1a1a1a;
         }
 
         body {
@@ -50,29 +51,90 @@
         .top-bar {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
-            padding: 1.2rem 1.5rem;
+            padding: 0.4rem 0.7rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .file-panels-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0.5rem;
+        }
+
+        .file-panels {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .compare-btn-group {
+            display: flex;
+            flex-shrink: 0;
+            border-radius: 7px;
+            overflow: hidden;
+            background: linear-gradient(90deg, var(--pink), var(--purple));
+        }
+
+        .compare-btn-group .btn {
+            background: transparent;
+            color: white;
+            border-radius: 0;
+            white-space: nowrap;
+            padding: 0.32rem 1rem;
+            font-size: 0.72rem;
+        }
+
+        .compare-btn-group .btn:not(:first-child) {
+            border-left: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .compare-btn-group .btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .file-panel {
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 0.25rem 0.5rem;
+            background: var(--surface);
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 0.5rem;
         }
 
-        .title {
-            font-size: 1.1rem;
+        .file-panel-title {
+            font-size: 0.68rem;
             font-weight: 600;
             color: var(--text);
+            flex-shrink: 0;
         }
 
-        .subtitle {
-            font-size: 0.78rem;
+        .file-panel-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 0.7rem;
             color: var(--text-soft);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .upload-btn {
-            padding: 0.6rem 1.2rem;
+            flex-shrink: 0;
+            padding: 0.22rem 0.6rem;
             background: var(--surface);
             border: 1.5px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
@@ -84,429 +146,200 @@
             border-color: var(--purple);
         }
 
-        .upload-btn.active {
-            background: linear-gradient(135deg, var(--pink), var(--purple));
-            color: white;
-            border-color: transparent;
-        }
-
         input[type="file"] {
             display: none;
         }
 
-        .main {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .sidebar {
-            width: 360px;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .sidebar.show {
-            display: flex;
-        }
-
-        .sidebar-header {
-            padding: 1rem 1.2rem;
-            border-bottom: 1px solid var(--border);
+        .action-bar {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-        }
-
-        .sidebar-title {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-soft);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .file-count {
-            font-size: 0.8rem;
-            color: var(--text-soft);
-            background: var(--hover);
-            padding: 0.2rem 0.6rem;
-            border-radius: 12px;
-        }
-
-        .tree-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0.5rem;
-        }
-
-        .tree-item {
-            padding: 0.6rem 0.8rem;
-            margin: 0.2rem 0;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            font-size: 0.9rem;
-        }
-
-        .tree-item:hover {
-            background: var(--hover);
-        }
-
-        .tree-item.selected {
-            background: linear-gradient(135deg, rgba(255, 179, 209, 0.15), rgba(212, 197, 249, 0.15));
-            border-left: 3px solid var(--purple);
-            padding-left: calc(0.8rem - 3px);
-        }
-
-        .tree-item.modified {
-            border-left: 3px solid var(--pink);
-            padding-left: calc(0.8rem - 3px);
-        }
-
-        .tree-item.selected.modified {
-            background: linear-gradient(135deg, rgba(255, 179, 209, 0.2), rgba(212, 197, 249, 0.2));
-        }
-
-        .file-icon {
-            font-size: 1rem;
-        }
-
-        .file-name {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-weight: 500;
-        }
-
-        .file-sub {
-            font-size: 0.7rem;
-            color: var(--text-soft);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .file-badge {
-            font-size: 0.7rem;
-            background: var(--remove-bg);
-            color: var(--remove-text);
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .file-badge.rename {
-            background: #eef0ff;
-            color: #5b6bd1;
-        }
-
-        .folder-item {
-            padding: 0.5rem 0.8rem;
-            font-size: 0.85rem;
-            color: var(--text-soft);
-            font-weight: 600;
-            margin-top: 0.8rem;
-        }
-
-        .content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .content-header {
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 1.5rem;
-            display: none;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-        .content-header.show {
-            display: flex;
-        }
-
-        .file-info-bar {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-            min-width: 0;
-        }
-
-        .current-file {
-            font-size: 1rem;
-            font-weight: 600;
-        }
-
-        .file-meta {
-            font-size: 0.78rem;
-            color: var(--text-soft);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.8rem 1.5rem;
-        }
-
-        .meta-item {
-            display: flex;
-            align-items: center;
+            justify-content: center;
             gap: 0.4rem;
-            max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            flex-wrap: wrap;
         }
 
-        .diff-nav {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex-shrink: 0;
-        }
-
-        .nav-btn {
-            padding: 0.5rem 0.9rem;
-            background: var(--surface);
-            border: 1px solid var(--border);
+        .btn {
+            padding: 0.32rem 0.75rem;
             border-radius: 6px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.15s;
-            font-family: 'Inter', sans-serif;
-            font-weight: 500;
-        }
-
-        .nav-btn:hover:not(:disabled) {
-            background: var(--hover);
-        }
-
-        .nav-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .diff-count {
-            font-size: 0.85rem;
-            color: var(--text-soft);
-            padding: 0.5rem 0.8rem;
-        }
-
-        .view-area {
-            flex: 1;
-            overflow-y: auto;
-            background: var(--bg);
-        }
-
-        .comparison-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1px;
-            background: var(--border);
-            min-height: 100%;
-        }
-
-        .pane {
-            background: var(--surface);
-            padding: 2rem;
-        }
-
-        .pane-header {
-            position: sticky;
-            top: 0;
-            background: var(--surface);
-            padding-bottom: 1rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid;
-            z-index: 5;
-        }
-
-        .pane:first-child .pane-header {
-            border-bottom-color: var(--remove-text);
-        }
-
-        .pane:last-child .pane-header {
-            border-bottom-color: var(--add-text);
-        }
-
-        .pane-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-soft);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        .pane-path {
             font-size: 0.72rem;
-            color: var(--text-soft);
-            margin-top: 0.3rem;
-            font-weight: 400;
-            text-transform: none;
-            letter-spacing: 0;
-        }
-
-        .diff-text {
-            font-size: 0.95rem;
-            line-height: 2;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .ws {
-            position: relative;
-            font-weight: 400;
-            padding: 0;
-            border-radius: 2px;
-            font-size: 0.6em;
-            display: inline-block;
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        .ws-normal {
-            color: var(--text-soft);
-            background: transparent;
-            opacity: 0.25;
-            font-size: 0.7em;
-        }
-
-        .ws-special {
-            color: #999;
-            font-weight: 400;
-            padding: 0;
-            border: none;
-            min-width: 0.4em;
-            opacity: 0.6;
-            font-size: 0.5em;
-        }
-
-        .ws-special.ws-wj,
-        .ws-special.ws-is {
-            color: #cc00cc;
-            opacity: 0.8;
-            font-size: 0.6em;
-        }
-
-        body.hide-whitespace .ws-normal {
-            display: none;
-        }
-
-        body.hide-all-whitespace .ws {
-            display: none;
-        }
-
-        .ws:hover {
-            opacity: 1;
-            background: #fff3cd;
-            padding: 0.1rem 0.3rem;
-            font-size: 0.85em;
-            border-radius: 3px;
-        }
-
-        .ws:hover::after {
-            content: attr(data-code);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2d3748;
-            color: white;
-            padding: 0.4rem 0.7rem;
-            border-radius: 5px;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            z-index: 100;
-            pointer-events: none;
-            margin-bottom: 0.3rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-
-        .ws-legend {
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-size: 0.8rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            display: none;
-            z-index: 50;
-            max-width: 350px;
-            max-height: 600px;
-        }
-
-        .ws-legend.show {
-            display: block;
-        }
-
-        .ws-legend-title {
-            font-weight: 700;
-            margin-bottom: 0.8rem;
-            color: var(--text);
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .legend-close {
+            font-weight: 600;
             cursor: pointer;
-            color: var(--text-soft);
-            font-size: 1.2rem;
-            line-height: 1;
-            padding: 0.2rem;
-            border-radius: 4px;
+            border: none;
+            font-family: 'Inter', sans-serif;
             transition: all 0.2s;
         }
 
-        .legend-close:hover {
-            background: var(--hover);
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--pink), var(--purple));
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            filter: brightness(1.05);
+        }
+
+        .btn-toggle {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
             color: var(--text);
         }
 
-        .ws-legend-item {
+        .btn-toggle:hover {
+            background: var(--hover);
+        }
+
+        .btn-toggle.active {
+            background: var(--purple);
+            border-color: var(--purple);
+            color: white;
+        }
+
+        .view-mode-group {
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .btn-accent {
+            background: var(--teal);
+            color: white;
+        }
+
+        .btn-accent:hover:not(:disabled) {
+            filter: brightness(1.05);
+        }
+
+        .diff-counter {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-soft);
+            min-width: 3.5rem;
+            text-align: center;
+        }
+
+        .content-row {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--surface);
+        }
+
+        .compare-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .compare-row.row-removed {
+            background: var(--removed-bg);
+        }
+
+        .compare-row.row-added {
+            background: var(--added-bg);
+        }
+
+        .compare-row.row-current {
+            box-shadow: inset 4px 0 0 var(--teal);
+        }
+
+        .collapsed-divider {
+            padding: 0.15rem 1.2rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-soft);
+            background: var(--hover);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .compare-cell {
+            padding: 0.45rem 0.9rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border-right: 1px solid var(--border);
+        }
+
+        .compare-cell:last-child {
+            border-right: none;
+        }
+
+        .compare-cell.cell-watermark {
+            background: #d4ffd1;
+        }
+
+        .placeholder-empty {
+            color: var(--text-soft);
+            font-style: italic;
+            font-size: 0.85rem;
+        }
+
+        .text-unique-left {
+            color: var(--remove-text);
+            font-weight: 600;
+        }
+
+        .text-unique-right {
+            color: var(--add-text);
+            font-weight: 600;
+        }
+
+        .removed,
+        .added {
+            background: var(--highlight-bg);
+            color: var(--highlight-text);
+            font-weight: 700;
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
+
+        .watermark-char {
+            display: inline-block;
+            background: #d90429;
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.7em;
+            font-family: 'Consolas', 'Courier New', monospace;
+            padding: 0 0.2em;
+            margin: 0 1px;
+            border-radius: 3px;
+            box-shadow: 0 0 0 1px #ffccd2;
+            cursor: help;
+            letter-spacing: -0.5px;
+        }
+
+        .legend {
             display: flex;
             align-items: center;
-            gap: 0.8rem;
-            margin: 0.5rem 0;
-            color: var(--text);
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            font-size: 0.7rem;
+            color: var(--text-soft);
         }
 
-        .removed {
-            background: var(--remove-bg);
-            color: var(--text);
-            padding: 1px 3px;
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .legend-swatch {
+            width: 0.7rem;
+            height: 0.7rem;
             border-radius: 3px;
-            text-decoration: line-through;
-            border-left: 2px solid var(--remove-text);
-            opacity: 0.85;
+            display: inline-block;
+            flex-shrink: 0;
         }
 
-        .added {
-            background: var(--add-bg);
-            color: var(--text);
-            padding: 1px 3px;
-            border-radius: 3px;
-            border-left: 2px solid var(--add-text);
-            opacity: 0.85;
-        }
-
-        .diff-marker {
-            scroll-margin-top: 100px;
-        }
+        .swatch-removed { background: var(--remove-text); border: 1px solid var(--remove-text); }
+        .swatch-added { background: var(--add-text); border: 1px solid var(--add-text); }
+        .swatch-highlight { background: var(--highlight-bg); border: 1px solid var(--highlight-text); }
+        .swatch-current { background: var(--teal); border: 1px solid var(--teal); }
+        .swatch-watermark { background: #d4ffd1; border: 1px solid #4caf50; }
 
         .empty-state {
             display: flex;
@@ -565,35 +398,6 @@
             font-weight: 500;
         }
 
-        .stats-bar {
-            padding: 1rem 1.5rem;
-            background: var(--surface);
-            border-top: 1px solid var(--border);
-            display: none;
-            gap: 2rem;
-            font-size: 0.85rem;
-            align-items: center;
-        }
-
-        .stats-bar.show {
-            display: flex;
-        }
-
-        .stat {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .stat-label {
-            color: var(--text-soft);
-        }
-
-        .stat-value {
-            font-weight: 600;
-            color: var(--text);
-        }
-
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -615,150 +419,135 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--purple);
         }
+
+        @media (max-width: 720px) {
+            .file-panels-row {
+                flex-direction: column;
+            }
+
+            .file-panels {
+                grid-template-columns: 1fr;
+            }
+
+            .compare-btn-group {
+                width: 100%;
+            }
+
+            .compare-btn-group .btn {
+                flex: 1;
+            }
+
+            .action-bar {
+                justify-content: flex-start;
+                gap: 0.3rem;
+            }
+
+            .action-bar .btn {
+                padding: 0.2rem 0.55rem;
+                font-size: 0.66rem;
+            }
+
+            .view-mode-group {
+                flex-wrap: wrap;
+                gap: 0.25rem;
+            }
+
+            .diff-counter {
+                min-width: auto;
+                font-size: 0.68rem;
+            }
+
+            .legend {
+                justify-content: flex-start;
+                font-size: 0.65rem;
+            }
+
+            .compare-row {
+                grid-template-columns: 1fr;
+            }
+
+            .compare-cell {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .compare-cell:last-child {
+                border-bottom: none;
+            }
+
+            .compare-cell::before {
+                display: block;
+                font-size: 0.65rem;
+                font-weight: 700;
+                color: var(--text-soft);
+                margin-bottom: 0.2rem;
+            }
+
+            .compare-cell:first-child::before {
+                content: '파일 A';
+            }
+
+            .compare-cell:last-child::before {
+                content: '파일 B';
+            }
+        }
     </style>
 </head>
 <body>
     <div class="app">
         <div class="top-bar">
-            <div>
-                <div class="title">📚 EPUB 텍스트 비교</div>
-                <div class="subtitle">각 파일 자체의 spine/NCX 읽기 순서로 정렬 후, 순서대로 짝지어 본문 텍스트만 비교합니다 (파일명·경로 무시)</div>
-            </div>
-            <button class="upload-btn" id="uploadBtn1" onclick="document.getElementById('file1').click()">
-                <span id="fileName1">파일 1 선택</span>
-            </button>
-            <button class="upload-btn" id="uploadBtn2" onclick="document.getElementById('file2').click()">
-                <span id="fileName2">파일 2 선택</span>
-            </button>
-            <input type="file" id="file1" accept=".epub" onchange="handleFile(1, this)">
-            <input type="file" id="file2" accept=".epub" onchange="handleFile(2, this)">
-        </div>
-
-        <div class="main">
-            <div class="sidebar" id="sidebar">
-                <div class="sidebar-header">
-                    <div class="sidebar-title">읽기 순서</div>
-                    <div class="file-count" id="fileCount">0개 항목</div>
+            <div class="file-panels-row">
+                <div class="file-panels">
+                    <div class="file-panel">
+                        <div class="file-panel-title">파일 A</div>
+                        <div class="file-panel-controls">
+                            <button class="upload-btn" onclick="document.getElementById('file1').click()">파일 선택</button>
+                            <span class="file-name" id="fileName1">선택된 파일 없음</span>
+                        </div>
+                    </div>
+                    <div class="file-panel">
+                        <div class="file-panel-title">파일 B</div>
+                        <div class="file-panel-controls">
+                            <button class="upload-btn" onclick="document.getElementById('file2').click()">파일 선택</button>
+                            <span class="file-name" id="fileName2">선택된 파일 없음</span>
+                        </div>
+                    </div>
+                    <input type="file" id="file1" accept=".epub,.txt" onchange="handleFile(1, this)">
+                    <input type="file" id="file2" accept=".epub,.txt" onchange="handleFile(2, this)">
                 </div>
-                <div class="tree-container" id="treeContainer"></div>
-            </div>
-
-            <div class="content">
-                <div class="content-header" id="contentHeader">
-                    <div class="file-info-bar">
-                        <div class="current-file" id="currentFileName">파일을 선택하세요</div>
-                        <div class="file-meta" id="fileMeta"></div>
-                    </div>
-                    <div class="diff-nav" id="diffNav">
-                        <button class="nav-btn" onclick="prevDiff()">← 이전</button>
-                        <div class="diff-count" id="diffCount">0/0</div>
-                        <button class="nav-btn" onclick="nextDiff()">다음 →</button>
-                    </div>
-                </div>
-
-                <div class="view-area" id="viewArea">
-                    <div class="empty-state">
-                        <div class="empty-icon">📄</div>
-                        <div class="empty-text">두 개의 EPUB 파일을 업로드하세요</div>
-                    </div>
-                </div>
-
-                <div class="stats-bar" id="statsBar">
-                    <div class="stat">
-                        <span class="stat-label">전체 항목:</span>
-                        <span class="stat-value" id="totalFiles">0</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">수정됨:</span>
-                        <span class="stat-value" id="modifiedFiles">0</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">추가:</span>
-                        <span class="stat-value" id="totalAdded">0</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">삭제:</span>
-                        <span class="stat-value" id="totalDeleted">0</span>
-                    </div>
-                    <button class="nav-btn" onclick="toggleWhitespaceMode()" id="wsToggleBtn" style="margin-left: auto;">특수문자만 표시</button>
-                    <button class="nav-btn" onclick="toggleLegend()">범례</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="ws-legend" id="wsLegend">
-        <div class="ws-legend-title">
-            <span>공백 문자 범례</span>
-            <span class="legend-close" onclick="toggleLegend()">✕</span>
-        </div>
-
-        <div style="background: var(--hover); padding: 0.6rem; border-radius: 6px; margin-bottom: 0.8rem; font-size: 0.75rem;">
-            <strong>현재 모드:</strong> 특수문자만 표시<br>
-            <span style="color: var(--text-soft);">일반 스페이스/탭/개행은 숨김<br>버튼을 눌러 전환하세요</span>
-        </div>
-
-        <div style="max-height: 350px; overflow-y: auto;">
-            <div style="font-weight: 600; margin-top: 0.3rem; margin-bottom: 0.4rem; color: var(--text);">일반 공백 (기본 숨김)</div>
-            <div class="ws-legend-item" style="opacity: 0.5;">
-                <span class="ws ws-normal">·</span>
-                <span>U+0020 스페이스 (가운뎃점)</span>
-            </div>
-            <div class="ws-legend-item" style="opacity: 0.5;">
-                <span class="ws ws-normal">°</span>
-                <span>U+00A0 NBSP (윗점)</span>
-            </div>
-            <div class="ws-legend-item" style="opacity: 0.5;">
-                <span class="ws ws-normal">→</span>
-                <span>U+0009 탭 (화살표)</span>
-            </div>
-            <div class="ws-legend-item" style="opacity: 0.5;">
-                <span class="ws ws-normal">¶</span>
-                <span>U+000A 개행 (단락 기호)</span>
-            </div>
-
-            <div style="font-weight: 600; margin-top: 0.8rem; margin-bottom: 0.4rem; color: var(--text);">⚠️ 보이지 않는 특수 문자</div>
-
-            <div style="background: #f8f0ff; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border-left: 3px solid #cc00cc;">
-                <div style="font-size: 0.75rem; font-weight: 600; color: #8800cc; margin-bottom: 0.3rem;">🚨 이진법 인코딩 (ID 숨김용)</div>
-                <div class="ws-legend-item">
-                    <span class="ws ws-special ws-wj">▫</span>
-                    <span>U+2060 Word joiner (작은 흰 박스)</span>
-                </div>
-                <div class="ws-legend-item">
-                    <span class="ws ws-special ws-is">▪</span>
-                    <span>U+2063 Invisible Separator (작은 검은 박스)</span>
+                <div class="compare-btn-group">
+                    <button class="btn" id="compareBtn" disabled onclick="compareFiles()">파일 비교 🫧</button>
+                    <button class="btn" id="metaCompareBtn" disabled onclick="compareMeta()">메타 비교 👻</button>
                 </div>
             </div>
 
-            <div class="ws-legend-item">
-                <span class="ws ws-special ws-zwsp">·</span>
-                <span>U+200B Zero-width space (점)</span>
+            <div class="action-bar">
+                <div class="view-mode-group">
+                    <button class="btn btn-toggle active" id="viewFullBtn" onclick="applyViewMode('full')">전체 보기</button>
+                    <button class="btn btn-toggle" id="viewSummaryBtn" onclick="applyViewMode('summary')">요약 보기</button>
+                    <button class="btn btn-toggle" id="viewOnlyDiffBtn" onclick="applyViewMode('onlyDiff')">틀린곳만</button>
+                </div>
+                <button class="btn btn-accent" id="prevDiffBtn" disabled onclick="goToPrevMismatch()">◀ 이전</button>
+                <span class="diff-counter" id="diffCounter">0/0</span>
+                <button class="btn btn-accent" id="nextDiffBtn" disabled onclick="goToNextMismatch()">다음 ▶</button>
             </div>
-            <div class="ws-legend-item">
-                <span class="ws ws-special ws-zwnj">·</span>
-                <span>U+200C Zero-width non-joiner (점)</span>
-            </div>
-            <div class="ws-legend-item">
-                <span class="ws ws-special ws-zwj">·</span>
-                <span>U+200D Zero-width joiner (점)</span>
-            </div>
-            <div class="ws-legend-item">
-                <span class="ws ws-special ws-shy">-</span>
-                <span>U+00AD Soft hyphen (하이픈)</span>
-            </div>
-            <div class="ws-legend-item">
-                <span class="ws ws-special ws-em">□</span>
-                <span>U+3000 전각 스페이스 (박스)</span>
-            </div>
-            <div style="margin-top: 0.5rem; padding: 0.5rem; background: var(--hover); border-radius: 4px; font-size: 0.75rem;">
-                💡 작은 점/박스는 원래 보이지 않는 문자입니다.<br>
-                마우스를 올리면 정확한 유니코드 정보를 볼 수 있습니다.
+
+            <div class="legend">
+                <span class="legend-item"><span class="legend-swatch swatch-removed"></span>파일 A에만 존재</span>
+                <span class="legend-item"><span class="legend-swatch swatch-added"></span>파일 B에만 존재</span>
+                <span class="legend-item"><span class="legend-swatch swatch-highlight"></span>차이점</span>
+                <span class="legend-item"><span class="legend-swatch swatch-current"></span>현재 위치</span>
+                <span class="legend-item"><span class="legend-swatch swatch-watermark"></span>공백 코드</span>
             </div>
         </div>
 
-        <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--border); font-size: 0.7rem; color: var(--text-soft);">
-            💡 각 문자에 마우스를 올리면 유니코드 정보가 표시됩니다
+        <div class="content-row">
+            <div class="compare-body" id="compareBody">
+                <div class="empty-state">
+                    <div class="empty-icon">📄</div>
+                    <div class="empty-text">두 개의 파일을 선택하고 비교하기를 눌러주세요 (epub / txt)</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -772,21 +561,19 @@
     <script>
         let file1 = null, file2 = null;
         let name1 = '', name2 = '';
-        let files1 = {}, files2 = {};
-        let allFiles = [];
-        let currentFile = null;
-        let diffMarkers = [];
-        let currentDiffIndex = 0;
 
-        async function handleFile(num, input) {
+        let allRows = [];
+        let mismatchIndices = [];
+        let currentMismatchPointer = -1;
+        let lastCurrentRowIdx = null;
+        let currentViewMode = 'full';
+        const viewHtmlCache = { full: '', summary: '', onlyDiff: '' };
+
+        function handleFile(num, input) {
             const file = input.files[0];
             if (!file) return;
 
-            const btn = document.getElementById(`uploadBtn${num}`);
-            const nameEl = document.getElementById(`fileName${num}`);
-
-            btn.classList.add('active');
-            nameEl.textContent = file.name;
+            document.getElementById(`fileName${num}`).textContent = file.name;
 
             if (num === 1) {
                 file1 = file;
@@ -796,52 +583,25 @@
                 name2 = file.name;
             }
 
-            if (file1 && file2) {
-                await compareFiles();
-            }
+            document.getElementById('compareBtn').disabled = !(file1 && file2);
+            document.getElementById('metaCompareBtn').disabled = !(file1 && file2);
         }
 
-        // ---------- ZIP 추출 ----------
+        // ---------- ZIP에서 텍스트 파일만 추출 (이미지/폰트 등 바이너리 제외) ----------
 
-        async function extractFiles(file) {
+        async function extractTextFiles(file) {
             const zip = new JSZip();
             const contents = await zip.loadAsync(file);
             const result = {};
-
-            const imageExts = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i;
+            const binaryExts = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ttf|otf|woff2?|mp3|mp4)$/i;
 
             for (const [path, zipFile] of Object.entries(contents.files)) {
                 if (zipFile.dir) continue;
-
-                if (imageExts.test(path)) {
-                    const base64 = await zipFile.async('base64');
-                    result[path] = {
-                        text: base64,
-                        date: zipFile.date,
-                        isImage: true,
-                        size: base64.length
-                    };
-                } else {
-                    const content = await zipFile.async('text');
-                    result[path] = {
-                        text: content,
-                        date: zipFile.date,
-                        isImage: false,
-                        size: content.length
-                    };
-                }
+                if (binaryExts.test(path)) continue;
+                result[path] = await zipFile.async('text');
             }
 
             return result;
-        }
-
-        function getFileName(path) {
-            return path.split('/').pop();
-        }
-
-        function getFolder(path) {
-            const parts = path.split('/');
-            return parts.length > 1 ? parts.slice(0, -1).join('/') : '';
         }
 
         // ---------- spine/NCX 읽기 순서 파악 ----------
@@ -855,29 +615,26 @@
         function resolveRelPath(baseDir, href) {
             href = (href || '').split('#')[0];
             if (!href) return null;
-            if (baseDir) {
-                const parts = baseDir.split('/').filter(Boolean);
-                href.split('/').forEach(part => {
-                    if (part === '' || part === '.') return;
-                    if (part === '..') parts.pop();
-                    else parts.push(part);
-                });
-                return parts.join('/');
-            }
-            return href.replace(/^\.\//, '');
+            const parts = baseDir ? baseDir.split('/').filter(Boolean) : [];
+            href.split('/').forEach(part => {
+                if (part === '' || part === '.') return;
+                if (part === '..') parts.pop();
+                else parts.push(part);
+            });
+            return parts.join('/');
         }
 
-        // OPF manifest+spine 기준 읽기 순서 (가장 신뢰도 높음: 모든 본문 문서 포함)
+        // OPF manifest+spine 기준 읽기 순서 (가장 신뢰도 높음)
         function getSpineOrder(filesObj) {
-            const container = filesObj['META-INF/container.xml'];
-            if (!container) return null;
-            const cdoc = parseXml(container.text);
+            const containerXml = filesObj['META-INF/container.xml'];
+            if (!containerXml) return null;
+            const cdoc = parseXml(containerXml);
             if (!cdoc) return null;
             const rootfile = cdoc.querySelector('rootfile');
             const opfPath = rootfile ? rootfile.getAttribute('full-path') : null;
-            if (!opfPath || !filesObj[opfPath]) return null;
+            if (!opfPath || !(opfPath in filesObj)) return null;
 
-            const opfDoc = parseXml(filesObj[opfPath].text);
+            const opfDoc = parseXml(filesObj[opfPath]);
             if (!opfDoc) return null;
             const opfDir = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/')) : '';
 
@@ -889,11 +646,10 @@
             const order = [];
             const seen = new Set();
             opfDoc.querySelectorAll('spine itemref').forEach(itemref => {
-                const idref = itemref.getAttribute('idref');
-                const href = manifest[idref];
+                const href = manifest[itemref.getAttribute('idref')];
                 if (!href) return;
                 const resolved = resolveRelPath(opfDir, href);
-                if (resolved && filesObj[resolved] && !seen.has(resolved)) {
+                if (resolved && (resolved in filesObj) && !seen.has(resolved)) {
                     seen.add(resolved);
                     order.push(resolved);
                 }
@@ -901,11 +657,11 @@
             return order.length ? order : null;
         }
 
-        // toc.ncx navMap 기준 읽기 순서 (spine을 못 찾았을 때 대체)
+        // toc.ncx navMap 기준 읽기 순서 (spine 파악 실패 시 대체)
         function getNcxOrder(filesObj) {
             const ncxPath = Object.keys(filesObj).find(p => p.toLowerCase().endsWith('.ncx'));
             if (!ncxPath) return null;
-            const doc = parseXml(filesObj[ncxPath].text);
+            const doc = parseXml(filesObj[ncxPath]);
             if (!doc) return null;
             const ncxDir = ncxPath.includes('/') ? ncxPath.slice(0, ncxPath.lastIndexOf('/')) : '';
 
@@ -913,7 +669,7 @@
             const seen = new Set();
             doc.querySelectorAll('navMap navPoint content').forEach(content => {
                 const resolved = resolveRelPath(ncxDir, content.getAttribute('src'));
-                if (resolved && filesObj[resolved] && !seen.has(resolved)) {
+                if (resolved && (resolved in filesObj) && !seen.has(resolved)) {
                     seen.add(resolved);
                     order.push(resolved);
                 }
@@ -924,670 +680,436 @@
         const HTML_RE = /\.(x?html?|htm)$/i;
 
         function getHtmlReadingOrder(filesObj) {
-            const allHtml = Object.keys(filesObj).filter(p => HTML_RE.test(p) && !filesObj[p].isImage);
-            let order = getSpineOrder(filesObj) || getNcxOrder(filesObj) || [];
-            order = order.filter(p => HTML_RE.test(p));
+            const allHtml = Object.keys(filesObj).filter(p => HTML_RE.test(p));
+            let order = (getSpineOrder(filesObj) || getNcxOrder(filesObj) || []).filter(p => HTML_RE.test(p));
 
-            // spine/ncx에 없는 남은 html은 경로순으로 뒤에 붙임 (누락 방지)
+            // spine/ncx에 안 걸린 나머지 html은 경로순으로 뒤에 붙여서 누락 방지
             const used = new Set(order);
             const orphans = allHtml.filter(p => !used.has(p)).sort((a, b) => a.localeCompare(b));
-            return { order: order.concat(orphans), source: getSpineOrder(filesObj) ? 'spine' : (getNcxOrder(filesObj) ? 'ncx' : 'fallback') };
+            return order.concat(orphans);
         }
 
-        // ---------- 본문 텍스트만 추출 (태그 제거) ----------
+        // ---------- 본문을 문단 배열로 추출 (태그/스크립트/스타일 제거) ----------
 
         const BLOCK_TAGS = new Set(['P','DIV','LI','H1','H2','H3','H4','H5','H6','TR','BLOCKQUOTE','SECTION','ARTICLE','TABLE','UL','OL','HR','PRE','FIGURE','FIGCAPTION','HEADER','FOOTER','ASIDE']);
 
-        function extractBodyText(htmlString) {
-            const doc = new DOMParser().parseFromString(htmlString, 'text/html');
+        // epub 본문은 XHTML(XML)이라 <title/>처럼 자기닫힘 태그가 유효하다. 그런데
+        // 'text/html' 모드로 파싱하면 <title>은 RCDATA라 자기닫힘을 인식하지 못하고
+        // 이후 </title>가 나올 때까지 본문 전체(모든 <p>...)를 title 안으로 삼켜버려서
+        // 본문이 통째로 사라지는 문제가 생긴다(Sigil 등 도구 버전에 따라 흔히 발생).
+        // 그래서 먼저 XML로 파싱을 시도하고, 정말로 깨진 마크업일 때만 HTML 모드로 대체한다.
+        function parseEpubDoc(htmlString) {
+            const xmlDoc = new DOMParser().parseFromString(htmlString, 'application/xhtml+xml');
+            if (xmlDoc && !xmlDoc.querySelector('parsererror')) return xmlDoc;
+            return new DOMParser().parseFromString(htmlString, 'text/html');
+        }
+
+        function extractParagraphsFromHtml(htmlString) {
+            const doc = parseEpubDoc(htmlString);
             const root = doc.body || doc.documentElement;
-            let out = '';
+            const paragraphs = [];
+            let current = '';
+
+            function flush() {
+                const norm = current.replace(/\s+/g, ' ').trim();
+                if (norm) paragraphs.push(norm);
+                current = '';
+            }
 
             function walk(node) {
                 if (node.nodeType === Node.TEXT_NODE) {
-                    out += node.nodeValue;
+                    current += node.nodeValue;
                     return;
                 }
                 if (node.nodeType !== Node.ELEMENT_NODE) return;
-                const tag = node.tagName;
+                // XML 모드에서는 tagName이 소스에 쓰인 대소문자를 그대로 보존하므로
+                // (HTML 모드처럼 자동 대문자화되지 않음) 비교 전에 통일한다.
+                const tag = node.tagName.toUpperCase();
                 if (tag === 'SCRIPT' || tag === 'STYLE') return;
-                if (tag === 'BR') { out += '\n'; return; }
+                if (tag === 'BR') { flush(); return; }
                 if (tag === 'IMG') {
                     const alt = node.getAttribute('alt');
-                    if (alt) out += `[이미지:${alt}]`;
+                    if (alt) current += `[이미지:${alt}]`;
                     return;
                 }
+                const isBlock = BLOCK_TAGS.has(tag);
+                if (isBlock) flush();
                 for (const child of node.childNodes) walk(child);
-                if (BLOCK_TAGS.has(tag) && !out.endsWith('\n')) out += '\n';
+                if (isBlock) flush();
             }
 
             walk(root);
-            return out;
+            flush();
+            return paragraphs;
         }
 
-        // ---------- 비교 ----------
-
-        async function compareFiles() {
-            document.getElementById('loading').style.display = 'flex';
-
-            try {
-                files1 = await extractFiles(file1);
-                files2 = await extractFiles(file2);
-
-                const html1 = getHtmlReadingOrder(files1);
-                const html2 = getHtmlReadingOrder(files2);
-
-                const htmlEntries = buildHtmlEntries(html1.order, html2.order);
-                const otherEntries = buildOtherEntries(files1, files2, html1.order.concat(), html2.order.concat());
-
-                allFiles = [...htmlEntries, ...otherEntries];
-
-                let totalMod = 0, totalAdd = 0, totalDel = 0;
-                allFiles.forEach(f => {
-                    if (f.modified) totalMod++;
-                    totalAdd += f.added || 0;
-                    totalDel += f.deleted || 0;
-                });
-
-                displayTree();
-                updateStats(allFiles.length, totalMod, totalAdd, totalDel);
-
-                document.getElementById('sidebar').classList.add('show');
-                document.getElementById('statsBar').classList.add('show');
-                document.getElementById('loading').style.display = 'none';
-
-                if (allFiles.length > 0) {
-                    setTimeout(() => {
-                        const firstItem = document.querySelector('.tree-item');
-                        if (firstItem) firstItem.click();
-                    }, 100);
-                }
-
-            } catch (error) {
-                alert('오류: ' + error.message);
-                document.getElementById('loading').style.display = 'none';
+        function buildBookParagraphs(filesObj, order) {
+            const paragraphs = [];
+            for (const p of order) {
+                paragraphs.push(...extractParagraphsFromHtml(filesObj[p]));
             }
+            return paragraphs;
         }
 
-        // 각 책 자신의 읽기 순서 인덱스끼리 짝짓기 (파일명 무시)
-        function buildHtmlEntries(order1, order2) {
-            const n = Math.max(order1.length, order2.length);
-            const entries = [];
+        async function extractParagraphsFromTxt(file) {
+            const text = await file.text();
+            return text
+                .split(/\r?\n\s*\r?\n+/)
+                .map(seg => seg.replace(/\s+/g, ' ').trim())
+                .filter(Boolean);
+        }
 
-            for (let i = 0; i < n; i++) {
-                const p1 = order1[i] || null;
-                const p2 = order2[i] || null;
+        async function getParagraphs(file) {
+            if (/\.epub$/i.test(file.name)) {
+                const filesObj = await extractTextFiles(file);
+                const order = getHtmlReadingOrder(filesObj);
+                if (order.length === 0) {
+                    throw new Error(`${file.name}: 본문 html/xhtml 문서를 찾지 못했습니다.`);
+                }
+                return buildBookParagraphs(filesObj, order);
+            }
+            return extractParagraphsFromTxt(file);
+        }
 
-                const raw1 = p1 ? files1[p1].text : '';
-                const raw2 = p2 ? files2[p2].text : '';
-                const plain1 = p1 ? extractBodyText(raw1) : '';
-                const plain2 = p2 ? extractBodyText(raw2) : '';
+        // ---------- 문단 단위 정렬(Myers) diff ----------
+        // 문단을 원자 단위로 취급해 최장 공통 부분열(LCS)을 찾는다.
+        // diff_match_patch의 라인 모드(diff_linesToChars_)는 편집 횟수만 최소화할 뿐이라
+        // 뒤쪽 공통 문단이 앞쪽 변경 블록에 잘못 흡수되는 경우가 있어 직접 구현한다.
 
-                if (p1 && p2) {
-                    const dmp = new diff_match_patch();
-                    const diffs = dmp.diff_main(plain1, plain2);
-                    dmp.diff_cleanupSemantic(diffs);
-                    let add = 0, del = 0;
-                    diffs.forEach(([op, text]) => {
-                        if (op === 1) add += text.length;
-                        else if (op === -1) del += text.length;
-                    });
-                    const modified = add > 0 || del > 0;
+        // 정렬(LCS) 판단은 워터마크 문자를 제거한 텍스트끼리 비교하고, 실제 화면에는
+        // 각자의 원본(워터마크 포함) 텍스트를 그대로 돌려준다. 그래야 같은 책의 서로 다른
+        // 배포본(워터마크만 다른 사본)을 비교할 때 문단이 통째로 "없음" 처리되지 않는다.
+        function myersDiff(a, b, keyFn) {
+            const key = keyFn || (x => x);
+            const keysA = a.map(key);
+            const keysB = b.map(key);
+            const N = a.length, M = b.length;
+            const MAX = N + M || 1;
+            const offset = MAX;
+            const v = new Int32Array(2 * MAX + 1);
+            const trace = [];
 
-                    entries.push({
-                        key: 'html-' + i,
-                        type: 'html',
-                        order: i,
-                        path1: p1, path2: p2,
-                        name: `${i + 1}. ${getFileName(p1)}${getFileName(p1) !== getFileName(p2) ? ' ↔ ' + getFileName(p2) : ''}`,
-                        folder: '',
-                        matched: true,
-                        renamed: p1 !== p2,
-                        modified,
-                        added: add, deleted: del,
-                        date1: files1[p1].date, date2: files2[p2].date,
-                        text1: plain1, text2: plain2,
-                        isImage: false
-                    });
-                } else {
-                    const side = p1 ? 1 : 2;
-                    const p = p1 || p2;
-                    entries.push({
-                        key: 'html-' + i,
-                        type: 'html',
-                        order: i,
-                        path1: p1, path2: p2,
-                        name: `${i + 1}. ${getFileName(p)}`,
-                        folder: '',
-                        matched: false,
-                        onlyIn: side,
-                        modified: true,
-                        added: side === 2 ? plain2.length : 0,
-                        deleted: side === 1 ? plain1.length : 0,
-                        date1: p1 ? files1[p1].date : null,
-                        date2: p2 ? files2[p2].date : null,
-                        text1: plain1, text2: plain2,
-                        isImage: false
-                    });
+            for (let d = 0; d <= MAX; d++) {
+                trace.push(v.slice());
+                for (let k = -d; k <= d; k += 2) {
+                    let x;
+                    if (k === -d || (k !== d && v[k - 1 + offset] < v[k + 1 + offset])) {
+                        x = v[k + 1 + offset];
+                    } else {
+                        x = v[k - 1 + offset] + 1;
+                    }
+                    let y = x - k;
+                    while (x < N && y < M && keysA[x] === keysB[y]) { x++; y++; }
+                    v[k + offset] = x;
+                    if (x >= N && y >= M) return myersBacktrack(trace, a, b, offset);
                 }
             }
-
-            return entries;
+            return myersBacktrack(trace, a, b, offset);
         }
 
-        // 본문 html이 아닌 나머지 파일들(css/opf/ncx/이미지 등)은 경로 기준으로 그대로 비교
-        function buildOtherEntries(files1, files2, htmlPaths1, htmlPaths2) {
-            const htmlSet1 = new Set(htmlPaths1), htmlSet2 = new Set(htmlPaths2);
-            const paths1 = Object.keys(files1).filter(p => !htmlSet1.has(p));
-            const paths2 = Object.keys(files2).filter(p => !htmlSet2.has(p));
-            const allPaths = new Set([...paths1, ...paths2]);
-            const set1 = new Set(paths1), set2 = new Set(paths2);
-            const entries = [];
+        function myersBacktrack(trace, a, b, offset) {
+            let x = a.length, y = b.length;
+            const ops = [];
 
-            for (const path of allPaths) {
-                const f1 = files1[path], f2 = files2[path];
-                const inBoth = set1.has(path) && set2.has(path);
+            for (let d = trace.length - 1; d >= 0; d--) {
+                const v = trace[d];
+                const k = x - y;
+                const prevK = (k === -d || (k !== d && v[k - 1 + offset] < v[k + 1 + offset])) ? k + 1 : k - 1;
+                const prevX = v[prevK + offset];
+                const prevY = prevX - prevK;
 
-                if (!inBoth) {
-                    const present = f1 || f2;
-                    entries.push({
-                        key: 'other-' + path,
-                        type: 'other',
-                        path1: f1 ? path : null,
-                        path2: f2 ? path : null,
-                        name: getFileName(path),
-                        folder: getFolder(path),
-                        matched: false,
-                        onlyIn: !f1 ? 2 : 1,
-                        modified: true,
-                        added: !f1 ? (f2.text?.length || 0) : 0,
-                        deleted: !f2 ? (f1.text?.length || 0) : 0,
-                        date1: f1?.date, date2: f2?.date,
-                        isImage: present.isImage,
-                        text1: f1 ? f1.text : '', text2: f2 ? f2.text : ''
-                    });
+                while (x > prevX && y > prevY) {
+                    ops.push({ op: 0, textA: a[x - 1], textB: b[y - 1] });
+                    x--; y--;
+                }
+                if (d > 0) {
+                    if (x === prevX) {
+                        ops.push({ op: 1, textB: b[y - 1] });
+                        y--;
+                    } else {
+                        ops.push({ op: -1, textA: a[x - 1] });
+                        x--;
+                    }
+                }
+            }
+            return ops.reverse();
+        }
+
+        function buildParagraphDiff(paragraphsA, paragraphsB) {
+            const ops = myersDiff(paragraphsA, paragraphsB, stripWatermarkChars);
+            const rows = [];
+            let i = 0;
+
+            while (i < ops.length) {
+                if (ops[i].op === 0) {
+                    rows.push({ type: 'match', left: ops[i].textA, right: ops[i].textB });
+                    i++;
                     continue;
                 }
 
-                if (f1.isImage && f2.isImage) {
-                    const modified = f1.text !== f2.text;
-                    entries.push({
-                        key: 'other-' + path,
-                        type: 'other',
-                        path1: path, path2: path,
-                        name: getFileName(path),
-                        folder: getFolder(path),
-                        matched: true,
-                        modified,
-                        isImage: true,
-                        added: 0, deleted: 0,
-                        date1: f1.date, date2: f2.date,
-                        size1: f1.size, size2: f2.size
-                    });
-                    continue;
+                const delLines = [], insLines = [];
+                while (i < ops.length && ops[i].op !== 0) {
+                    if (ops[i].op === -1) delLines.push(ops[i].textA);
+                    else insLines.push(ops[i].textB);
+                    i++;
                 }
 
-                const dmp = new diff_match_patch();
-                const diffs = dmp.diff_main(f1.text, f2.text);
-                dmp.diff_cleanupSemantic(diffs);
-                let add = 0, del = 0;
-                diffs.forEach(([op, text]) => {
-                    if (op === 1) add += text.length;
-                    else if (op === -1) del += text.length;
-                });
-                const modified = add > 0 || del > 0;
-
-                entries.push({
-                    key: 'other-' + path,
-                    type: 'other',
-                    path1: path, path2: path,
-                    name: getFileName(path),
-                    folder: getFolder(path),
-                    matched: true,
-                    modified,
-                    added: add, deleted: del,
-                    date1: f1.date, date2: f2.date,
-                    isImage: false,
-                    text1: f1.text, text2: f2.text
-                });
-            }
-
-            return entries;
-        }
-
-        // ---------- 화면 표시 ----------
-
-        function displayTree() {
-            const container = document.getElementById('treeContainer');
-
-            const htmlItems = allFiles.filter(f => f.type === 'html');
-            const otherGrouped = {};
-            allFiles.filter(f => f.type === 'other').forEach(f => {
-                const folder = f.folder || 'root';
-                if (!otherGrouped[folder]) otherGrouped[folder] = [];
-                otherGrouped[folder].push(f);
-            });
-
-            let html = '';
-
-            if (htmlItems.length) {
-                html += `<div class="folder-item">📖 본문 (읽기 순서)</div>`;
-                htmlItems.forEach(f => {
-                    html += renderTreeItem(f);
-                });
-            }
-
-            for (const [folder, files] of Object.entries(otherGrouped)) {
-                html += `<div class="folder-item">📁 ${folder === 'root' ? '기타' : folder}</div>`;
-                files.forEach(f => {
-                    html += renderTreeItem(f);
-                });
-            }
-
-            container.innerHTML = html;
-            document.getElementById('fileCount').textContent = `${allFiles.length}개 항목`;
-
-            document.querySelectorAll('.tree-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    selectFile(this.getAttribute('data-key'));
-                });
-            });
-        }
-
-        function renderTreeItem(f) {
-            const icon = getFileIcon(f);
-            let badge = '';
-            if (!f.matched) {
-                badge = `<span class="file-badge">${f.onlyIn === 1 ? '1에만' : '2에만'}</span>`;
-            } else if (f.renamed) {
-                badge = `<span class="file-badge rename">이름다름</span>`;
-            } else if (f.modified) {
-                badge = `<span class="file-badge">수정</span>`;
-            }
-            const sub = f.type === 'html' && f.matched && f.renamed
-                ? `<div class="file-sub">${f.path1} ↔ ${f.path2}</div>` : '';
-            return `
-                <div class="tree-item ${f.modified ? 'modified' : ''}" data-key="${f.key}">
-                    <span class="file-icon">${icon}</span>
-                    <div style="flex:1; min-width:0;">
-                        <span class="file-name">${f.name}</span>
-                        ${sub}
-                    </div>
-                    ${badge}
-                </div>
-            `;
-        }
-
-        function getFileIcon(file) {
-            if (file.isImage) return '🖼️';
-            if (file.type === 'html') return '📝';
-            if (file.name.endsWith('.opf')) return '📋';
-            if (file.name.endsWith('.ncx')) return '📑';
-            if (file.name.endsWith('.css')) return '🎨';
-            if (file.name.endsWith('.xml')) return '📄';
-            return '📄';
-        }
-
-        function selectFile(key) {
-            currentFile = allFiles.find(f => f.key === key);
-            if (!currentFile) return;
-
-            document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
-            document.querySelector(`.tree-item[data-key="${key}"]`)?.classList.add('selected');
-
-            displayFileComparison();
-        }
-
-        function displayFileComparison() {
-            document.getElementById('contentHeader').classList.add('show');
-            document.getElementById('currentFileName').textContent = currentFile.name;
-
-            const date1Str = currentFile.date1 ? new Date(currentFile.date1).toLocaleString('ko-KR') : '없음';
-            const date2Str = currentFile.date2 ? new Date(currentFile.date2).toLocaleString('ko-KR') : '없음';
-
-            let extra = '';
-            if (currentFile.type === 'html') {
-                extra = `<div class="meta-item">1: ${currentFile.path1 || '❌ 없음'}</div><div class="meta-item">2: ${currentFile.path2 || '❌ 없음'}</div>`;
-                if (!currentFile.matched) {
-                    extra += `<div class="meta-item">⚠️ ${currentFile.onlyIn === 1 ? '파일1에만 존재 (파일2에 대응하는 순서 항목 없음)' : '파일2에만 존재 (파일1에 대응하는 순서 항목 없음)'}</div>`;
+                const pairCount = Math.min(delLines.length, insLines.length);
+                for (let k = 0; k < pairCount; k++) {
+                    rows.push({ type: 'changed', left: delLines[k], right: insLines[k] });
                 }
-            } else {
-                extra = `<div class="meta-item">📖 ${date1Str}</div><div class="meta-item">📕 ${date2Str}</div>`;
+                for (let k = pairCount; k < delLines.length; k++) {
+                    rows.push({ type: 'removed', left: delLines[k], right: null });
+                }
+                for (let k = pairCount; k < insLines.length; k++) {
+                    rows.push({ type: 'added', left: null, right: insLines[k] });
+                }
             }
+            return rows;
+        }
 
-            document.getElementById('fileMeta').innerHTML = extra;
-
-            const view = document.getElementById('viewArea');
-
-            if (!currentFile.matched) {
-                const content = currentFile.onlyIn === 1 ? currentFile.text1 : currentFile.text2;
-                const displayContent = currentFile.isImage ? '[이미지 파일]' : visualizeWhitespace(content || '');
-
-                view.innerHTML = `
-                    <div class="comparison-grid">
-                        <div class="pane">
-                            <div class="pane-header"><div class="pane-title">${name1}</div></div>
-                            <div class="diff-text">${currentFile.onlyIn === 1 ? displayContent : '❌ 대응 항목 없음'}</div>
-                        </div>
-                        <div class="pane">
-                            <div class="pane-header"><div class="pane-title">${name2}</div></div>
-                            <div class="diff-text">${currentFile.onlyIn === 2 ? displayContent : '❌ 대응 항목 없음'}</div>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('diffNav').style.display = 'none';
-                return;
-            }
-
-            if (currentFile.isImage) {
-                const mimeType = getImageMimeType(currentFile.name);
-                const img1 = files1[currentFile.path1]?.text ?
-                    `<img src="data:${mimeType};base64,${files1[currentFile.path1].text}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />` :
-                    '❌ 파일 없음';
-                const img2 = files2[currentFile.path2]?.text ?
-                    `<img src="data:${mimeType};base64,${files2[currentFile.path2].text}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />` :
-                    '❌ 파일 없음';
-
-                view.innerHTML = `
-                    <div class="comparison-grid">
-                        <div class="pane">
-                            <div class="pane-header"><div class="pane-title">${name1}</div></div>
-                            <div class="diff-text">${img1}</div>
-                        </div>
-                        <div class="pane">
-                            <div class="pane-header"><div class="pane-title">${name2}</div></div>
-                            <div class="diff-text">${img2}</div>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('diffNav').style.display = 'none';
-                return;
-            }
-
-            if (!currentFile.modified) {
-                view.innerHTML = `
-                    <div class="comparison-grid">
-                        <div class="pane">
-                            <div class="pane-header"><div class="pane-title">${name1}</div></div>
-                            <div class="diff-text">${visualizeWhitespace(currentFile.text1 || '내용 없음')}</div>
-                        </div>
-                        <div class="pane">
-                            <div class="pane-header"><div class="pane-title">${name2}</div></div>
-                            <div class="diff-text">${visualizeWhitespace(currentFile.text2 || '내용 없음')}</div>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('diffNav').style.display = 'none';
-                return;
-            }
-
-            const text1 = currentFile.text1 || '';
-            const text2 = currentFile.text2 || '';
-
-            let leftHtml = '', rightHtml = '';
-            diffMarkers = [];
-            let markerIndex = 0;
-
+        function renderChangedPair(leftText, rightText) {
             const dmp = new diff_match_patch();
-            const lineDiffs = dmp.diff_main(text1, text2);
-            dmp.diff_cleanupSemantic(lineDiffs);
+            const diffs = dmp.diff_main(leftText, rightText);
+            dmp.diff_cleanupSemantic(diffs);
 
-            for (let diff of lineDiffs) {
-                const [op, text] = diff;
-                const diffLines = text.split('\n');
-
-                if (op === 0) {
-                    for (let j = 0; j < diffLines.length; j++) {
-                        if (j > 0) {
-                            leftHtml += visualizeWhitespace('\n');
-                            rightHtml += visualizeWhitespace('\n');
-                        }
-                        leftHtml += visualizeWhitespace(diffLines[j]);
-                        rightHtml += visualizeWhitespace(diffLines[j]);
-                    }
-                } else if (op === -1) {
-                    for (let j = 0; j < diffLines.length; j++) {
-                        if (j > 0) leftHtml += visualizeWhitespace('\n');
-                        if (diffLines[j].trim().length > 0 || j === diffLines.length - 1) {
-                            leftHtml += `<span class="removed diff-marker" id="diff-${markerIndex}">${visualizeWhitespace(diffLines[j])}</span>`;
-                            diffMarkers.push(markerIndex);
-                            markerIndex++;
-                        } else {
-                            leftHtml += visualizeWhitespace(diffLines[j]);
-                        }
-                    }
-                } else if (op === 1) {
-                    for (let j = 0; j < diffLines.length; j++) {
-                        if (j > 0) rightHtml += visualizeWhitespace('\n');
-                        if (diffLines[j].trim().length > 0 || j === diffLines.length - 1) {
-                            rightHtml += `<span class="added diff-marker" id="diff-${markerIndex}">${visualizeWhitespace(diffLines[j])}</span>`;
-                            diffMarkers.push(markerIndex);
-                            markerIndex++;
-                        } else {
-                            rightHtml += visualizeWhitespace(diffLines[j]);
-                        }
-                    }
-                }
+            let left = '', right = '';
+            for (const [op, text] of diffs) {
+                const esc = renderTextWithWatermarks(text);
+                if (op === 0) { left += esc; right += esc; }
+                else if (op === -1) { left += `<span class="removed">${esc}</span>`; }
+                else if (op === 1) { right += `<span class="added">${esc}</span>`; }
             }
-
-            view.innerHTML = `
-                <div class="comparison-grid">
-                    <div class="pane">
-                        <div class="pane-header">
-                            <div class="pane-title">${name1} (삭제)</div>
-                            <div class="pane-path">${currentFile.path1}</div>
-                        </div>
-                        <div class="diff-text">${leftHtml}</div>
-                    </div>
-                    <div class="pane">
-                        <div class="pane-header">
-                            <div class="pane-title">${name2} (추가)</div>
-                            <div class="pane-path">${currentFile.path2}</div>
-                        </div>
-                        <div class="diff-text">${rightHtml}</div>
-                    </div>
-                </div>
-            `;
-
-            currentDiffIndex = 0;
-            updateDiffNav();
-            document.getElementById('diffNav').style.display = 'flex';
+            return { left, right };
         }
 
-        function updateDiffNav() {
-            document.getElementById('diffCount').textContent =
-                diffMarkers.length > 0 ? `${currentDiffIndex + 1}/${diffMarkers.length}` : '0/0';
-        }
-
-        function nextDiff() {
-            if (currentDiffIndex < diffMarkers.length - 1) {
-                currentDiffIndex++;
-                scrollToDiff();
+        function containsWatermark(text) {
+            if (!text) return false;
+            for (const ch of text) {
+                if (WATERMARK_CHARS[ch.codePointAt(0)]) return true;
             }
+            return false;
         }
 
-        function prevDiff() {
-            if (currentDiffIndex > 0) {
-                currentDiffIndex--;
-                scrollToDiff();
-            }
-        }
+        function buildRowHtml(row, idx) {
+            let leftHtml, rightHtml, rowClass;
 
-        function scrollToDiff() {
-            const marker = document.getElementById(`diff-${diffMarkers[currentDiffIndex]}`);
-            if (marker) {
-                marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            updateDiffNav();
-        }
-
-        function updateStats(total, modified, added, deleted) {
-            document.getElementById('totalFiles').textContent = total;
-            document.getElementById('modifiedFiles').textContent = modified;
-            document.getElementById('totalAdded').textContent = formatNum(added);
-            document.getElementById('totalDeleted').textContent = formatNum(deleted);
-        }
-
-        function formatNum(n) {
-            return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : n.toString();
-        }
-
-        function getImageMimeType(filename) {
-            const ext = filename.split('.').pop().toLowerCase();
-            const mimeTypes = {
-                'jpg': 'image/jpeg',
-                'jpeg': 'image/jpeg',
-                'png': 'image/png',
-                'gif': 'image/gif',
-                'webp': 'image/webp',
-                'svg': 'image/svg+xml',
-                'bmp': 'image/bmp'
-            };
-            return mimeTypes[ext] || 'image/png';
-        }
-
-        let whitespaceMode = 'special'; // 'all', 'special', 'none'
-
-        function toggleWhitespaceMode() {
-            const btn = document.getElementById('wsToggleBtn');
-            const body = document.body;
-
-            if (whitespaceMode === 'special') {
-                whitespaceMode = 'all';
-                body.classList.remove('hide-whitespace');
-                body.classList.remove('hide-all-whitespace');
-                btn.textContent = '모두 표시';
-            } else if (whitespaceMode === 'all') {
-                whitespaceMode = 'none';
-                body.classList.add('hide-all-whitespace');
-                btn.textContent = '숨기기';
+            if (row.type === 'match') {
+                leftHtml = renderTextWithWatermarks(row.left);
+                rightHtml = renderTextWithWatermarks(row.right);
+                rowClass = 'row-match';
+            } else if (row.type === 'changed') {
+                const rendered = renderChangedPair(row.left, row.right);
+                leftHtml = rendered.left;
+                rightHtml = rendered.right;
+                rowClass = 'row-changed';
+            } else if (row.type === 'removed') {
+                leftHtml = `<span class="text-unique-left">${renderTextWithWatermarks(row.left)}</span>`;
+                rightHtml = `<span class="placeholder-empty">(파일 B에 없음)</span>`;
+                rowClass = 'row-removed';
             } else {
-                whitespaceMode = 'special';
-                body.classList.remove('hide-all-whitespace');
-                body.classList.add('hide-whitespace');
-                btn.textContent = '특수문자만 표시';
+                leftHtml = `<span class="placeholder-empty">(파일 A에 없음)</span>`;
+                rightHtml = `<span class="text-unique-right">${renderTextWithWatermarks(row.right)}</span>`;
+                rowClass = 'row-added';
             }
+
+            const leftCellClass = containsWatermark(row.left) ? ' cell-watermark' : '';
+            const rightCellClass = containsWatermark(row.right) ? ' cell-watermark' : '';
+
+            return `<div class="compare-row ${rowClass}" id="row-${idx}">
+                <div class="compare-cell${leftCellClass}">${leftHtml}</div>
+                <div class="compare-cell${rightCellClass}">${rightHtml}</div>
+            </div>`;
         }
 
-        window.addEventListener('DOMContentLoaded', function() {
-            document.body.classList.add('hide-whitespace');
+        const SUMMARY_CONTEXT_LINES = 3;
 
-            document.addEventListener('click', function(e) {
-                const legend = document.getElementById('wsLegend');
-                const legendBtn = e.target.closest('.nav-btn');
-
-                if (legend.classList.contains('show') &&
-                    !legend.contains(e.target) &&
-                    (!legendBtn || legendBtn.textContent !== '범례')) {
-                    legend.classList.remove('show');
+        function computeVisibility(length, mismatchIdx, context) {
+            const visible = new Array(length).fill(false);
+            for (const idx of mismatchIdx) {
+                for (let j = Math.max(0, idx - context); j <= Math.min(length - 1, idx + context); j++) {
+                    visible[j] = true;
                 }
-            });
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    const legend = document.getElementById('wsLegend');
-                    if (legend.classList.contains('show')) {
-                        legend.classList.remove('show');
-                    }
-                }
-            });
-        });
-
-        function toggleLegend() {
-            const legend = document.getElementById('wsLegend');
-            legend.classList.toggle('show');
+            }
+            return visible;
         }
 
-        function visualizeWhitespace(text) {
+        function buildContextHtml(rows, mismatchIdx, context) {
+            const visible = computeVisibility(rows.length, mismatchIdx, context);
+            let html = '';
+            let i = 0;
+            while (i < rows.length) {
+                if (visible[i]) {
+                    html += buildRowHtml(rows[i], i);
+                    i++;
+                    continue;
+                }
+                let j = i;
+                while (j < rows.length && !visible[j]) j++;
+                html += `<div class="collapsed-divider">── 동일한 문단 ${j - i}개 생략 ──</div>`;
+                i = j;
+            }
+            return html;
+        }
+
+        function renderRows(rows) {
+            allRows = rows;
+            mismatchIndices = [];
+            currentMismatchPointer = -1;
+            lastCurrentRowIdx = null;
+
+            rows.forEach((row, idx) => {
+                if (row.type !== 'match') mismatchIndices.push(idx);
+            });
+
+            const emptyHtml = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">두 파일의 문단 내용이 동일합니다</div></div>`;
+
+            viewHtmlCache.full = rows.map((row, idx) => buildRowHtml(row, idx)).join('') || emptyHtml;
+            viewHtmlCache.summary = buildContextHtml(rows, mismatchIndices, SUMMARY_CONTEXT_LINES) || emptyHtml;
+            viewHtmlCache.onlyDiff = buildContextHtml(rows, mismatchIndices, 0) || emptyHtml;
+
+            applyViewMode('full');
+        }
+
+        function applyViewMode(mode) {
+            currentViewMode = mode;
+            document.getElementById('compareBody').innerHTML = viewHtmlCache[mode] || '';
+
+            document.getElementById('viewFullBtn').classList.toggle('active', mode === 'full');
+            document.getElementById('viewSummaryBtn').classList.toggle('active', mode === 'summary');
+            document.getElementById('viewOnlyDiffBtn').classList.toggle('active', mode === 'onlyDiff');
+
+            if (lastCurrentRowIdx !== null) {
+                const el = document.getElementById(`row-${lastCurrentRowIdx}`);
+                if (el) el.classList.add('row-current');
+            }
+
+            updateDiffNavUI();
+        }
+
+        function updateDiffNavUI() {
+            const total = mismatchIndices.length;
+            const cur = currentMismatchPointer >= 0 ? currentMismatchPointer + 1 : 0;
+            document.getElementById('diffCounter').textContent = `${cur}/${total}`;
+            document.getElementById('prevDiffBtn').disabled = total === 0;
+            document.getElementById('nextDiffBtn').disabled = total === 0;
+        }
+
+        function goToMismatch(rowIdx) {
+            if (lastCurrentRowIdx !== null) {
+                const prevEl = document.getElementById(`row-${lastCurrentRowIdx}`);
+                if (prevEl) prevEl.classList.remove('row-current');
+            }
+
+            const el = document.getElementById(`row-${rowIdx}`);
+            if (el) {
+                el.classList.add('row-current');
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            lastCurrentRowIdx = rowIdx;
+            updateDiffNavUI();
+        }
+
+        function goToNextMismatch() {
+            if (!mismatchIndices.length) return;
+            currentMismatchPointer = (currentMismatchPointer + 1) % mismatchIndices.length;
+            goToMismatch(mismatchIndices[currentMismatchPointer]);
+        }
+
+        function goToPrevMismatch() {
+            if (!mismatchIndices.length) return;
+            currentMismatchPointer = (currentMismatchPointer - 1 + mismatchIndices.length) % mismatchIndices.length;
+            goToMismatch(mismatchIndices[currentMismatchPointer]);
+        }
+
+        // 눈에 보이지 않는 워터마크(ID 은닉용) 문자를 어떤 문단 상태(동일/변경/단독)에서든
+        // 항상 눈에 띄는 표식으로 바꿔서 보여준다. 두 문자가 이진 인코딩(0/1)처럼 섞여
+        // 쓰이는 경우가 많아, 뭉뚱그린 기호 하나가 아니라 종류를 구분할 수 있는
+        // [WJ]/[IS] 태그로 실제 코드 순서를 그대로 읽을 수 있게 표시한다.
+        const WATERMARK_CHARS = {
+            0x2060: { tag: 'WJ', title: 'U+2060 Word Joiner (워터마크 의심 문자)' },
+            0x2063: { tag: 'IS', title: 'U+2063 Invisible Separator (워터마크 의심 문자)' }
+        };
+
+        function renderTextWithWatermarks(text) {
             let result = '';
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                const code = char.charCodeAt(0);
+            for (const ch of text) {
+                if (ch === '&') { result += '&amp;'; continue; }
+                if (ch === '<') { result += '&lt;'; continue; }
+                if (ch === '>') { result += '&gt;'; continue; }
 
-                if (char === '<') {
-                    result += '&lt;';
-                } else if (char === '>') {
-                    result += '&gt;';
-                } else if (char === '&') {
-                    result += '&amp;';
-                } else if (char === '"') {
-                    result += '&quot;';
-                } else if (char === "'") {
-                    result += '&#39;';
-                }
-                else if (code === 0x0020) {
-                    result += `<span class="ws ws-normal ws-space" data-code="U+0020 SPACE" title="U+0020 일반 스페이스">·</span>`;
-                } else if (code === 0x00A0) {
-                    result += `<span class="ws ws-normal ws-nbsp" data-code="U+00A0 NBSP" title="U+00A0 Non-breaking space">°</span>`;
-                } else if (code === 0x0009) {
-                    result += `<span class="ws ws-normal ws-tab" data-code="U+0009 TAB" title="U+0009 탭">→</span>`;
-                }
-                else if (code === 0x000A) {
-                    if (i > 0 && text.charCodeAt(i - 1) === 0x000D) {
-                        // CRLF의 LF 부분
-                    } else {
-                        result += `<span class="ws ws-normal ws-newline" data-code="U+000A LF" title="U+000A 개행 (LF)">¶</span>\n`;
-                    }
-                } else if (code === 0x000D) {
-                    if (i + 1 < text.length && text.charCodeAt(i + 1) === 0x000A) {
-                        result += `<span class="ws ws-normal ws-crlf" data-code="U+000D+000A CRLF" title="U+000D+000A CRLF">¶</span>\n`;
-                        i++;
-                    } else {
-                        result += `<span class="ws ws-normal ws-cr" data-code="U+000D CR" title="U+000D 캐리지 리턴">↵</span>`;
-                    }
-                }
-                else if (code === 0x200B) {
-                    result += `<span class="ws ws-special ws-zwsp" data-code="U+200B ZWSP" title="U+200B Zero-width space">·</span>`;
-                } else if (code === 0x200C) {
-                    result += `<span class="ws ws-special ws-zwnj" data-code="U+200C ZWNJ" title="U+200C Zero-width non-joiner">·</span>`;
-                } else if (code === 0x200D) {
-                    result += `<span class="ws ws-special ws-zwj" data-code="U+200D ZWJ" title="U+200D Zero-width joiner">·</span>`;
-                }
-                else if (code === 0x2060) {
-                    result += `<span class="ws ws-special ws-wj" data-code="U+2060 WJ" title="U+2060 Word joiner (이진법 인코딩)">▫</span>`;
-                } else if (code === 0x2063) {
-                    result += `<span class="ws ws-special ws-is" data-code="U+2063 IS" title="U+2063 Invisible Separator (이진법 인코딩)">▪</span>`;
-                }
-                else if (code === 0xFEFF) {
-                    result += `<span class="ws ws-special ws-zwsp" data-code="U+FEFF BOM" title="U+FEFF BOM">◦</span>`;
-                } else if (code === 0x00AD) {
-                    result += `<span class="ws ws-special ws-shy" data-code="U+00AD SHY" title="U+00AD Soft hyphen">-</span>`;
-                } else if (code === 0x034F) {
-                    result += `<span class="ws ws-special ws-cgj" data-code="U+034F CGJ" title="U+034F Combining grapheme joiner">·</span>`;
-                } else if (code === 0x180E) {
-                    result += `<span class="ws ws-special ws-zwsp" data-code="U+180E MVS" title="U+180E Mongolian vowel separator">·</span>`;
-                } else if (code === 0x061C) {
-                    result += `<span class="ws ws-special ws-zwsp" data-code="U+061C ALM" title="U+061C Arabic letter mark">·</span>`;
-                }
-                else if (code === 0x3000) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+3000 EM-SPACE" title="U+3000 전각 스페이스">□</span>`;
-                } else if (code === 0x3164) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+3164 HANGUL" title="U+3164 한글 채움 문자">□</span>`;
-                } else if (code === 0xFFA0) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+FFA0 HW-SPACE" title="U+FFA0 Halfwidth Hangul space">□</span>`;
-                } else if (code === 0x115F) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+115F CHOSEONG" title="U+115F Hangul Choseong Filler">□</span>`;
-                } else if (code === 0x1160) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+1160 JUNGSEONG" title="U+1160 Hangul Jungseong Filler">□</span>`;
-                } else if (code === 0x2003) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+2003 EM-SPACE" title="U+2003 Em space">□</span>`;
-                } else if (code === 0x2002) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+2002 EN-SPACE" title="U+2002 En space">□</span>`;
-                } else if (code === 0x2004) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+2004 3/EM" title="U+2004 Three-per-em space">□</span>`;
-                } else if (code === 0x2005) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+2005 4/EM" title="U+2005 Four-per-em space">□</span>`;
-                } else if (code === 0x2006) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+2006 6/EM" title="U+2006 Six-per-em space">□</span>`;
-                } else if (code === 0x2009) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+2009 THIN" title="U+2009 Thin space">□</span>`;
-                } else if (code === 0x200A) {
-                    result += `<span class="ws ws-special ws-em" data-code="U+200A HAIR" title="U+200A Hair space">□</span>`;
+                const info = WATERMARK_CHARS[ch.codePointAt(0)];
+                if (info) {
+                    result += `<span class="watermark-char" title="${info.title}">[${info.tag}]</span>`;
                 } else {
-                    result += char;
+                    result += ch;
                 }
             }
             return result;
+        }
+
+        function stripWatermarkChars(text) {
+            let out = '';
+            for (const ch of text) {
+                if (!WATERMARK_CHARS[ch.codePointAt(0)]) out += ch;
+            }
+            return out;
+        }
+
+        async function compareFiles() {
+            if (!file1 || !file2) return;
+            document.getElementById('loading').style.display = 'flex';
+
+            try {
+                const paragraphsA = await getParagraphs(file1);
+                const paragraphsB = await getParagraphs(file2);
+
+                if (paragraphsA.length === 0 || paragraphsB.length === 0) {
+                    throw new Error('본문 문단을 찾지 못했습니다.');
+                }
+
+                const rows = buildParagraphDiff(paragraphsA, paragraphsB);
+                renderRows(rows);
+            } catch (error) {
+                alert('오류: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // ---------- OPF(패키지 메타데이터)만 비교 ----------
+
+        async function getOpfInfo(file) {
+            if (!/\.epub$/i.test(file.name)) {
+                throw new Error(`${file.name}: OPF 메타데이터는 epub 파일에서만 추출할 수 있습니다.`);
+            }
+            const filesObj = await extractTextFiles(file);
+            const containerXml = filesObj['META-INF/container.xml'];
+            if (!containerXml) throw new Error(`${file.name}: META-INF/container.xml을 찾지 못했습니다.`);
+
+            const cdoc = parseXml(containerXml);
+            const rootfile = cdoc && cdoc.querySelector('rootfile');
+            const opfPath = rootfile ? rootfile.getAttribute('full-path') : null;
+            if (!opfPath || !(opfPath in filesObj)) {
+                throw new Error(`${file.name}: OPF 파일 경로를 찾지 못했습니다.`);
+            }
+
+            return { path: opfPath, lines: filesObj[opfPath].split(/\r\n|\r|\n/) };
+        }
+
+        async function compareMeta() {
+            if (!file1 || !file2) return;
+            document.getElementById('loading').style.display = 'flex';
+
+            try {
+                const [opfA, opfB] = await Promise.all([getOpfInfo(file1), getOpfInfo(file2)]);
+                const rows = buildParagraphDiff(opfA.lines, opfB.lines);
+                renderRows(rows);
+            } catch (error) {
+                alert('오류: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
         }
     </script>
 </body>
