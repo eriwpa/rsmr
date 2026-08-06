@@ -790,66 +790,51 @@
 
         // ---------- 문단 단위 정렬(Myers) diff ----------
         // 문단을 원자 단위로 취급해 최장 공통 부분열(LCS)을 찾는다.
-        // diff_match_patch의 라인 모드(diff_linesToChars_)는 편집 횟수만 최소화할 뿐이라
-        // 뒤쪽 공통 문단이 앞쪽 변경 블록에 잘못 흡수되는 경우가 있어 직접 구현한다.
-
+        //
+        // 예전에는 교과서적인 O(ND) Myers diff를 직접 구현해 각 반복마다 v 배열
+        // 전체를 trace에 스냅샷으로 저장했는데, 이 방식은 되짚기(backtrack)엔 편하지만
+        // 메모리가 O(D^2)로 늘어난다. 두 epub이 판형이 많이 달라 D(편집 거리)가
+        // 문단 수에 근접하면(리플로우가 심한 개정판 비교 등) 스냅샷이 수천 개 쌓이며
+        // "Array buffer allocation failed"로 죽는다(10MB 넘는 대용량 epub 두 개를
+        // 비교할 때 실제로 발생 보고됨). 그래서 이미 로드된 diff_match_patch의 라인
+        // 모드 인코딩(diff_linesToChars_)을 재사용한다 - 문단 하나를 한 글자로 치환해
+        // diff_main에 넘기면, diff_match_patch가 내부적으로 선형 공간(bisect) 알고리즘을
+        // 쓰기 때문에 같은 LCS 정렬을 메모리 폭발 없이 구할 수 있다.
+        //
         // 정렬(LCS) 판단은 워터마크 문자를 제거한 텍스트끼리 비교하고, 실제 화면에는
         // 각자의 원본(워터마크 포함) 텍스트를 그대로 돌려준다. 그래야 같은 책의 서로 다른
         // 배포본(워터마크만 다른 사본)을 비교할 때 문단이 통째로 "없음" 처리되지 않는다.
-        function myersDiff(a, b, keyFn) {
-            const key = keyFn || (x => x);
-            const keysA = a.map(key);
-            const keysB = b.map(key);
-            const N = a.length, M = b.length;
-            const MAX = N + M || 1;
-            const offset = MAX;
-            const v = new Int32Array(2 * MAX + 1);
-            const trace = [];
+        function alignParagraphs(a, b) {
+            const dmp = new diff_match_patch();
+            // 끝에도 '\n'을 붙여야 마지막 문단이 다른 쪽에선 끝이 아닐 때도
+            // 같은 줄 문자열로 해시되어 매칭된다(안 붙이면 마지막 문단만
+            // trailing \n이 없어 동일 문단인데도 다른 문자로 인코딩됨).
+            const linesA = a.map(stripWatermarkChars).join('\n') + '\n';
+            const linesB = b.map(stripWatermarkChars).join('\n') + '\n';
+            const { chars1, chars2 } = dmp.diff_linesToChars_(linesA, linesB);
+            const diffs = dmp.diff_main(chars1, chars2, false);
 
-            for (let d = 0; d <= MAX; d++) {
-                trace.push(v.slice());
-                for (let k = -d; k <= d; k += 2) {
-                    let x;
-                    if (k === -d || (k !== d && v[k - 1 + offset] < v[k + 1 + offset])) {
-                        x = v[k + 1 + offset];
-                    } else {
-                        x = v[k - 1 + offset] + 1;
-                    }
-                    let y = x - k;
-                    while (x < N && y < M && keysA[x] === keysB[y]) { x++; y++; }
-                    v[k + offset] = x;
-                    if (x >= N && y >= M) return myersBacktrack(trace, a, b, offset);
-                }
-            }
-            return myersBacktrack(trace, a, b, offset);
-        }
-
-        function myersBacktrack(trace, a, b, offset) {
-            let x = a.length, y = b.length;
             const ops = [];
-
-            for (let d = trace.length - 1; d >= 0; d--) {
-                const v = trace[d];
-                const k = x - y;
-                const prevK = (k === -d || (k !== d && v[k - 1 + offset] < v[k + 1 + offset])) ? k + 1 : k - 1;
-                const prevX = v[prevK + offset];
-                const prevY = prevX - prevK;
-
-                while (x > prevX && y > prevY) {
-                    ops.push({ op: 0, textA: a[x - 1], textB: b[y - 1] });
-                    x--; y--;
-                }
-                if (d > 0) {
-                    if (x === prevX) {
-                        ops.push({ op: 1, textB: b[y - 1] });
-                        y--;
-                    } else {
-                        ops.push({ op: -1, textA: a[x - 1] });
-                        x--;
+            let idxA = 0, idxB = 0;
+            for (const [op, chars] of diffs) {
+                if (op === 0) {
+                    for (let i = 0; i < chars.length; i++) {
+                        ops.push({ op: 0, textA: a[idxA], textB: b[idxB] });
+                        idxA++; idxB++;
+                    }
+                } else if (op === -1) {
+                    for (let i = 0; i < chars.length; i++) {
+                        ops.push({ op: -1, textA: a[idxA] });
+                        idxA++;
+                    }
+                } else {
+                    for (let i = 0; i < chars.length; i++) {
+                        ops.push({ op: 1, textB: b[idxB] });
+                        idxB++;
                     }
                 }
             }
-            return ops.reverse();
+            return ops;
         }
 
         // 워터마크/공백 차이만 제외하고 이어붙인 본문이 완전히 같은지 비교하기 위한 정규화.
@@ -863,7 +848,7 @@
         // 이어붙여 문자 단위로 비교한다 - 문단이 어떻게 재배치됐든 diff_match_patch가
         // 공통 부분을 알아서 정렬해 실제로 달라진 글자만 잡아낸다.
         function buildParagraphDiff(paragraphsA, paragraphsB) {
-            const ops = myersDiff(paragraphsA, paragraphsB, stripWatermarkChars);
+            const ops = alignParagraphs(paragraphsA, paragraphsB);
             const rows = [];
             let i = 0;
 
