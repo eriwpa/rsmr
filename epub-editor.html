@@ -142,6 +142,9 @@
     opacity: 0.25 !important; cursor: default; pointer-events: none;
   }
 
+  /* 프리뷰 토글 버튼 (활성 상태 강조) */
+  .preview-btn.active { color: var(--accent) !important; opacity: 1 !important; }
+
   /* ════════════════════════════════════════
      LAYOUT — PC (기본)
   ════════════════════════════════════════ */
@@ -229,7 +232,34 @@
   .tab .close:hover { opacity: 1; color: var(--red); }
 
   /* ─── EDITOR WRAP ─── */
-  .editor-wrap { flex: 1; display: flex; flex-direction: column; border-top: 1px solid var(--border); overflow: hidden; background: var(--bg2); }
+  .editor-wrap { flex: 1; display: flex; flex-direction: column; border-top: 1px solid var(--border); overflow: hidden; background: var(--bg2); min-width: 0; }
+
+  /* ─── EDITOR + PREVIEW SPLIT ─── */
+  .editor-preview-split { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+  .editor-preview-split .editor-wrap { flex: 1; }
+  .preview-wrap {
+    width: 46%; min-width: 340px; max-width: 62%; flex-shrink: 0;
+    display: flex; flex-direction: column; overflow: hidden;
+    border-top: 1px solid var(--border); border-left: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .preview-wrap.hidden { display: none; }
+  .preview-header {
+    height: 32px; flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; border-bottom: 1px solid var(--border);
+    font-size: 10px; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .preview-header .preview-refresh-btn {
+    margin-left: auto; background: none; border: none; cursor: pointer;
+    font-size: 13px; color: var(--text-dim); padding: 2px 4px; line-height: 1;
+  }
+  .preview-header .preview-refresh-btn:hover { color: var(--accent); }
+  .preview-frame { flex: 1; width: 100%; border: none; background: #ffffff; }
+  .preview-placeholder {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim); font-size: 12px; text-align: center; padding: 20px; background: var(--bg);
+  }
 
   /* ─── CODE EDITOR ─── */
   .editor-container {
@@ -585,6 +615,18 @@
     .editor-tabs { padding: 4px 8px 0; }
     .tab { padding: 4px 10px; font-size: 10px; max-width: 130px; }
 
+    /* 프리뷰 패널 모바일: 켜지면 화면 전체를 덮음 (topbar 포함) */
+    .preview-wrap {
+      width: 100%; max-width: none; min-width: unset;
+      border-left: none; border-top: none;
+      position: fixed; inset: 0; z-index: 60;
+    }
+    .preview-header { height: 44px; padding: 0 12px; background: var(--bg2); }
+    .preview-header .preview-close-btn {
+      background: none; border: none; cursor: pointer; font-size: 16px;
+      color: var(--text-dim); padding: 2px 6px; line-height: 1;
+    }
+
     /* code editor 모바일 */
     .code-editor { font-size: 12px; line-height: 1.65; padding: 10px 12px; white-space: pre-wrap; word-break: break-all; overflow-x: hidden; }
     .invis-overlay { font-size: 12px; line-height: 1.65; padding: 10px 12px; background: var(--bg); white-space: pre-wrap; word-break: break-all; overflow-x: hidden; }
@@ -754,11 +796,13 @@
   <button id="btnUndo" class="pc-only" disabled title="되감기 (Ctrl+Z)" style="background:none;border:none;font-size:18px;padding:0 4px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
   <button id="btnRedo" class="pc-only" disabled title="다시실행 (Ctrl+Y)" style="background:none;border:none;font-size:18px;padding:0 4px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
   <!-- PC 버튼 -->
+  <button class="preview-btn pc-only" id="btnPreviewPc" disabled title="미리보기 켜기/끄기" onclick="togglePreview()">👁️</button>
   <button class="open-btn pc-only" id="btnOpenPc" title="파일 열기">📂</button>
   <button id="btnSavePc" class="primary pc-only" disabled title="저장">💾</button>
   <button id="btnResetPc" class="reset-btn pc-only" disabled title="초기화">🔄</button>
   <!-- 모바일 버튼 -->
   <div class="mb-only" style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+    <button class="tb-btn preview-btn" id="btnPreviewMb" disabled title="미리보기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.75;line-height:1;" onclick="togglePreview()">👁️</button>
     <button class="tb-btn open-btn" id="btnOpenMb" style="background:none;border:none;font-size:16px;padding:0 2px;">📂</button>
     <button id="btnUndoMb" disabled title="되감기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
     <button id="btnRedoMb" disabled title="다시실행" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
@@ -793,10 +837,20 @@
   <!-- 에디터 영역 -->
   <div class="main">
     <div class="editor-tabs" id="editorTabs"></div>
-    <div class="editor-wrap" id="editorWrap">
-      <div class="empty-state">
-        <div class="big-icon">📖</div>
-        <p id="emptyMsg">왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
+    <div class="editor-preview-split" id="editorPreviewSplit">
+      <div class="editor-wrap" id="editorWrap">
+        <div class="empty-state">
+          <div class="big-icon">📖</div>
+          <p id="emptyMsg">왼쪽 파일 트리에서 편집할 파일을 선택하세요</p>
+        </div>
+      </div>
+      <div class="preview-wrap hidden" id="previewWrap">
+        <div class="preview-header">
+          <span id="previewTitle">Preview</span>
+          <button class="preview-close-btn mb-only" id="btnPreviewClose" title="닫기" onclick="togglePreview()">✕</button>
+          <button class="preview-refresh-btn" id="btnPreviewRefresh" title="새로고침" onclick="refreshPreview()">⟳</button>
+        </div>
+        <iframe class="preview-frame" id="previewFrame" title="HTML 미리보기" sandbox="allow-same-origin"></iframe>
       </div>
     </div>
   </div>
@@ -842,12 +896,15 @@
       emptyMsg.textContent = '버튼을 눌러 EPUB을 열고\n좌하단 버튼으로 파일을 선택하세요';
       // PC 사이드바가 열려있으면 닫기
       closeSidebarIfOpen();
+      previewVisible = false;   // 모바일: 버튼을 눌러야 전체화면 프리뷰
     } else {
       handle.style.display = 'none';
       fab.style.display = 'none';
       emptyMsg.textContent = '왼쪽 파일 트리에서 편집할 파일을 선택하세요';
       closeDrawer();
+      previewVisible = true;    // PC: 기본 강제 ON (파이썬 버전처럼)
     }
+    updatePreviewLayout();
   }
 
   window.addEventListener('resize', detectMode);
@@ -877,6 +934,12 @@
   let isTxtMode = false;
   let txtChapters = [];   // [{title, startLine, endLine}, ...]
   let txtContent  = '';   // 전체 원문
+
+  // ─── 프리뷰 (HTML 미리보기) ───
+  let previewVisible = true;      // PC: 기본 ON(강제) / 모바일: 모드 전환 시 OFF로 재설정
+  let previewTargetPath = null;   // 마지막으로 연 HTML 파일 (CSS 등을 보고 있어도 이 파일을 계속 미리보기)
+  let previewBlobUrls = [];       // 프리뷰용 blob URL (교체 시 revoke)
+  let previewRefreshTimer = null;
 
   // ─── 제로폭/불가시 문자 정의 ───
   const INVIS_CHARS = {
@@ -1122,6 +1185,9 @@
     fileTree.innerHTML = `<div class="empty-state" style="padding:40px 14px; font-size:12px; text-align:center;">EPUB 파일을 열면<br/>내부 구조가 표시됩니다</div>`;
     editorTabs.innerHTML = '';
     editorWrap.innerHTML = `<div class="empty-state"><div class="big-icon">📖</div><p>${isMobile ? '버튼을 눌러 EPUB을 여세요' : '왼쪽 파일 트리에서 편집할 파일을 선택하세요'}</p></div>`;
+    previewTargetPath = null;
+    releasePreviewBlobUrls();
+    updatePreviewLayout();
     updateStatus();
   }
 
@@ -1695,6 +1761,171 @@
     else if(type === 'txt-main') renderTextEditor(true);
     else if(['html','xml','opf','ncx','css','text'].includes(type)) renderTextEditor();
     else editorWrap.innerHTML = `<div class="empty-state"><p>바이너리 파일은 편집할 수 없습니다</p></div>`;
+    if(type === 'html') previewTargetPath = activeTab;
+    updatePreviewLayout();
+    refreshPreview();
+  }
+
+  // ════════════════════════════════════════
+  //  PREVIEW (HTML 미리보기)
+  // ════════════════════════════════════════
+
+  function isPreviewableTab() {
+    return !!previewTargetPath && fileTypes[previewTargetPath] === 'html' && typeof files[previewTargetPath] === 'string';
+  }
+
+  function togglePreview() {
+    if(!activeTab) return;
+    previewVisible = !previewVisible;
+    updatePreviewLayout();
+    if(previewVisible) refreshPreview();
+  }
+
+  function updatePreviewLayout() {
+    const previewWrap = document.getElementById('previewWrap');
+    const previewBtnPc = document.getElementById('btnPreviewPc');
+    const previewBtnMb = document.getElementById('btnPreviewMb');
+    if(!previewWrap) return;
+
+    const hasFile = !!activeTab;
+    [previewBtnPc, previewBtnMb].forEach(btn => {
+      if(!btn) return;
+      btn.disabled = !hasFile;
+      btn.classList.toggle('active', previewVisible && hasFile);
+    });
+
+    const show = previewVisible && hasFile;
+    previewWrap.classList.toggle('hidden', !show);
+    if(isMobile) {
+      const editorWrapEl = document.getElementById('editorWrap');
+      if(editorWrapEl) editorWrapEl.style.display = show ? 'none' : '';
+    } else {
+      const editorWrapEl = document.getElementById('editorWrap');
+      if(editorWrapEl) editorWrapEl.style.display = '';
+    }
+  }
+
+  function releasePreviewBlobUrls() {
+    previewBlobUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch(e) {} });
+    previewBlobUrls = [];
+  }
+
+  function resolveRelativePath(basePath, relPath) {
+    if(!relPath || /^(https?:|data:|blob:|mailto:|javascript:)/i.test(relPath)) return null;
+    const clean = relPath.split('#')[0].split('?')[0];
+    if(!clean) return null;
+    const baseDir = basePath.includes('/') ? basePath.split('/').slice(0, -1) : [];
+    const stack = clean.startsWith('/') ? [] : baseDir.slice();
+    clean.split('/').forEach(part => {
+      if(part === '' || part === '.') return;
+      if(part === '..') stack.pop();
+      else stack.push(part);
+    });
+    return stack.join('/');
+  }
+
+  const PREVIEW_MIME_MAP = {
+    jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', svg:'image/svg+xml',
+    webp:'image/webp', css:'text/css', woff:'font/woff', woff2:'font/woff2', ttf:'font/ttf',
+    otf:'font/otf', mp3:'audio/mpeg', mp4:'video/mp4', ogg:'audio/ogg'
+  };
+
+  function fileToPreviewUrl(path) {
+    const data = files[path];
+    if(data === undefined) return null;
+    const ext = getExt(path).toLowerCase();
+    const mime = PREVIEW_MIME_MAP[ext] || 'application/octet-stream';
+    const blob = new Blob([data], {type: mime});
+    const url = URL.createObjectURL(blob);
+    previewBlobUrls.push(url);
+    return url;
+  }
+
+  function rewriteCssUrls(cssText, cssPath) {
+    return cssText.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (m, q, url) => {
+      if(/^(data:|https?:|#)/i.test(url)) return m;
+      const resolved = resolveRelativePath(cssPath, url);
+      const objUrl = resolved !== null ? fileToPreviewUrl(resolved) : null;
+      return objUrl ? `url("${objUrl}")` : m;
+    });
+  }
+
+  function rewriteResourceAttr(doc, selector, attr, basePath) {
+    doc.querySelectorAll(selector).forEach(el => {
+      const val = el.getAttribute(attr);
+      if(!val) return;
+      const resolved = resolveRelativePath(basePath, val);
+      if(resolved === null) return;
+      const url = fileToPreviewUrl(resolved);
+      if(url) el.setAttribute(attr, url);
+    });
+  }
+
+  function buildPreviewHtml(path) {
+    const raw = files[path];
+    if(typeof raw !== 'string') return null;
+
+    const doc = new DOMParser().parseFromString(raw, 'text/html');
+
+    // 이미지/미디어 리소스
+    rewriteResourceAttr(doc, 'img[src]', 'src', path);
+    rewriteResourceAttr(doc, 'source[src]', 'src', path);
+    rewriteResourceAttr(doc, 'image[href]', 'href', path);
+    // SVG의 xlink:href는 콜론이 포함된 속성이라 속성 선택자 이스케이프가 불안정하므로 직접 순회
+    doc.querySelectorAll('image').forEach(el => {
+      if(!el.hasAttribute('xlink:href')) return;
+      const val = el.getAttribute('xlink:href');
+      const resolved = resolveRelativePath(path, val);
+      if(resolved === null) return;
+      const url = fileToPreviewUrl(resolved);
+      if(url) el.setAttribute('xlink:href', url);
+    });
+
+    // 외부 스타일시트 → 인라인 <style>로 치환 (url() 내부 참조도 재귀 변환)
+    doc.querySelectorAll('link[rel="stylesheet"][href]').forEach(link => {
+      const href = link.getAttribute('href');
+      const resolved = resolveRelativePath(path, href);
+      const cssContent = resolved !== null ? files[resolved] : undefined;
+      const styleEl = doc.createElement('style');
+      if(typeof cssContent === 'string') styleEl.textContent = rewriteCssUrls(cssContent, resolved);
+      link.replaceWith(styleEl);
+    });
+
+    // 인라인 <style> 내부 url() 변환
+    doc.querySelectorAll('style').forEach(styleEl => {
+      styleEl.textContent = rewriteCssUrls(styleEl.textContent, path);
+    });
+
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }
+
+  function showPreviewPlaceholder(message) {
+    const frame = document.getElementById('previewFrame');
+    if(!frame) return;
+    frame.srcdoc = `<!DOCTYPE html><html><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#fafafa;font-family:'Malgun Gothic',sans-serif;color:#999;font-size:13px;text-align:center;padding:20px;"><p>${escHtml(message)}</p></body></html>`;
+    const title = document.getElementById('previewTitle');
+    if(title) title.textContent = 'Preview';
+  }
+
+  function refreshPreview() {
+    if(!previewVisible) return;
+    releasePreviewBlobUrls();
+    if(!isPreviewableTab()) {
+      showPreviewPlaceholder(activeTab ? 'HTML 파일을 선택하면 미리보기가 표시됩니다' : '파일을 열면 미리보기가 표시됩니다');
+      return;
+    }
+    const html = buildPreviewHtml(previewTargetPath);
+    const frame = document.getElementById('previewFrame');
+    if(!frame || html === null) { showPreviewPlaceholder('미리보기를 생성할 수 없습니다'); return; }
+    frame.srcdoc = html;
+    const title = document.getElementById('previewTitle');
+    if(title) title.textContent = `Preview · ${previewTargetPath.split('/').pop()}`;
+  }
+
+  function schedulePreviewRefresh() {
+    if(!previewVisible) return;
+    clearTimeout(previewRefreshTimer);
+    previewRefreshTimer = setTimeout(refreshPreview, 400);
   }
 
   // ─── 제로폭 오버레이 ───
@@ -1815,6 +2046,7 @@
       updateLineNumbers();
       if(!modifiedFiles.has(activeTab)) { modifiedFiles.add(activeTab); renderTabs(); renderFileTree(); updateStatus(); }
       updateOverlay();
+      schedulePreviewRefresh();
     });
     editor.addEventListener('keydown', e => {
       if(e.key === 'Tab') {
