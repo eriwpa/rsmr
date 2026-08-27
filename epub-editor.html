@@ -1524,13 +1524,45 @@
     return null;
   }
 
+  function parseNcxTree(content, tocDir) {
+    const entries = [];
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(content, 'application/xml');
+      if(doc.querySelector('parsererror')) throw new Error('ncx parse error');
+    } catch(err) {
+      for(const m of content.matchAll(/<navLabel>\s*<text>([^<]+)<\/text>\s*<\/navLabel>\s*<content\s+src="([^"]+)"/gi))
+        entries.push({ label: m[1], content: tocDir + m[2], level: 1 });
+      return entries;
+    }
+    const navMap = doc.getElementsByTagName('navMap')[0];
+    if(!navMap) return entries;
+    function walk(el, level) {
+      for(const child of Array.from(el.children)) {
+        if(child.tagName !== 'navPoint') continue;
+        let label = '', src = '';
+        for(const c of Array.from(child.children)) {
+          if(c.tagName === 'navLabel') {
+            const t = Array.from(c.children).find(x => x.tagName === 'text');
+            if(t) label = t.textContent.trim();
+          } else if(c.tagName === 'content') {
+            src = c.getAttribute('src') || '';
+          }
+        }
+        entries.push({ label, content: tocDir + src, level });
+        walk(child, level + 1);
+      }
+    }
+    walk(navMap, 1);
+    return entries;
+  }
+
   function parseToc(path) {
     const content = files[path];
     tocEntries = [];
     const tocDir = path.includes('/') ? path.split('/').slice(0,-1).join('/') + '/' : '';
     if(path.endsWith('.ncx')) {
-      for(const m of content.matchAll(/<navLabel>\s*<text>([^<]+)<\/text>\s*<\/navLabel>\s*<content\s+src="([^"]+)"/gi))
-        tocEntries.push({ label: m[1], content: tocDir + m[2], level: 1 });
+      tocEntries = parseNcxTree(content, tocDir);
     } else {
       for(const m of content.matchAll(/<a\s+href="([^"]+)">([^<]+)<\/a>/gi))
         tocEntries.push({ label: m[2], content: tocDir + m[1], level: 1 });
