@@ -106,6 +106,12 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .file-panel.drag-over {
+            border-color: var(--purple);
+            background: var(--hover);
         }
 
         .file-panel-title {
@@ -227,6 +233,7 @@
             flex: 1;
             overflow-y: auto;
             background: var(--surface);
+            transition: background 0.15s, outline 0.15s;
         }
 
         .compare-row {
@@ -379,6 +386,18 @@
             font-weight: 500;
         }
 
+        .empty-subtext {
+            font-size: 0.85rem;
+            margin-top: 0.4rem;
+            opacity: 0.8;
+        }
+
+        .content-row.drag-over {
+            background: var(--hover);
+            outline: 3px dashed var(--purple);
+            outline-offset: -3px;
+        }
+
         .loading {
             position: fixed;
             inset: 0;
@@ -514,18 +533,18 @@
         <div class="top-bar">
             <div class="file-panels-row">
                 <div class="file-panels">
-                    <div class="file-panel">
+                    <div class="file-panel" id="filePanel1">
                         <div class="file-panel-title">파일 A</div>
                         <div class="file-panel-controls">
                             <button class="upload-btn" onclick="document.getElementById('file1').click()">파일 선택</button>
-                            <span class="file-name" id="fileName1">선택된 파일 없음</span>
+                            <span class="file-name" id="fileName1">선택된 파일 없음 (드래그 가능)</span>
                         </div>
                     </div>
-                    <div class="file-panel">
+                    <div class="file-panel" id="filePanel2">
                         <div class="file-panel-title">파일 B</div>
                         <div class="file-panel-controls">
                             <button class="upload-btn" onclick="document.getElementById('file2').click()">파일 선택</button>
-                            <span class="file-name" id="fileName2">선택된 파일 없음</span>
+                            <span class="file-name" id="fileName2">선택된 파일 없음 (드래그 가능)</span>
                         </div>
                     </div>
                     <input type="file" id="file1" accept=".epub,.txt" onchange="handleFile(1, this)">
@@ -558,11 +577,12 @@
             </div>
         </div>
 
-        <div class="content-row">
+        <div class="content-row" id="contentRow">
             <div class="compare-body" id="compareBody">
                 <div class="empty-state">
                     <div class="empty-icon">📄</div>
                     <div class="empty-text">두 개의 파일을 선택하고 비교하기를 눌러주세요 (epub / txt)</div>
+                    <div class="empty-subtext">여기에 파일을 드래그해서 넣어도 됩니다 (1개씩 두 번 또는 2개 한 번에)</div>
                 </div>
             </div>
         </div>
@@ -589,7 +609,10 @@
         function handleFile(num, input) {
             const file = input.files[0];
             if (!file) return;
+            assignFile(num, file);
+        }
 
+        function assignFile(num, file) {
             document.getElementById(`fileName${num}`).textContent = file.name;
 
             if (num === 1) {
@@ -603,6 +626,77 @@
             document.getElementById('compareBtn').disabled = !(file1 && file2);
             document.getElementById('metaCompareBtn').disabled = !(file1 && file2);
         }
+
+        // ---------- 드래그 앤 드롭 ----------
+        // 파일 하나씩 각 패널에 드롭하면 해당 슬롯(A/B)에 들어가고,
+        // 한 번에 파일 2개를 드롭하면 순서대로 A/B에 각각 들어간다.
+        // 3개 이상 드롭하면 처리하지 않고 안내만 띄운다.
+        const ACCEPTED_EXT = /\.(epub|txt)$/i;
+
+        function setupDragAndDrop() {
+            [1, 2].forEach(num => {
+                const panel = document.getElementById(`filePanel${num}`);
+                panel.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    panel.classList.add('drag-over');
+                });
+                panel.addEventListener('dragleave', () => {
+                    panel.classList.remove('drag-over');
+                });
+                panel.addEventListener('drop', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    panel.classList.remove('drag-over');
+                    handleDroppedFiles(e.dataTransfer.files, num);
+                });
+            });
+
+            // 아래 큰 비교 화면에도 동일하게 드래그해서 넣을 수 있도록 허용.
+            // 여기는 특정 슬롯(A/B)을 겨냥한 게 아니므로 빈 슬롯을 순서대로 채운다.
+            const contentRow = document.getElementById('contentRow');
+            contentRow.addEventListener('dragover', e => {
+                e.preventDefault();
+                contentRow.classList.add('drag-over');
+            });
+            contentRow.addEventListener('dragleave', () => {
+                contentRow.classList.remove('drag-over');
+            });
+            contentRow.addEventListener('drop', e => {
+                e.preventDefault();
+                contentRow.classList.remove('drag-over');
+                handleDroppedFiles(e.dataTransfer.files, null);
+            });
+        }
+
+        function handleDroppedFiles(fileList, droppedOnNum) {
+            const files = Array.from(fileList).filter(f => ACCEPTED_EXT.test(f.name));
+
+            if (files.length === 0) {
+                alert('epub 또는 txt 파일만 드래그해서 넣을 수 있습니다.');
+                return;
+            }
+            if (files.length > 2) {
+                alert('한 번에 최대 2개까지만 올릴 수 있습니다.');
+                return;
+            }
+
+            if (files.length === 2) {
+                assignFile(1, files[0]);
+                assignFile(2, files[1]);
+                return;
+            }
+
+            // 단일 파일: 특정 슬롯에 드롭했으면 그 슬롯에, 아니면 비어있는 슬롯을 순서대로 채운다.
+            const targetNum = droppedOnNum || (!file1 ? 1 : (!file2 ? 2 : 1));
+            assignFile(targetNum, files[0]);
+        }
+
+        setupDragAndDrop();
+
+        // 패널 밖에 떨어뜨렸을 때 브라우저가 파일을 열어버리는 것 방지
+        window.addEventListener('dragover', e => e.preventDefault());
+        window.addEventListener('drop', e => e.preventDefault());
 
         // ---------- ZIP에서 텍스트 파일만 추출 (이미지/폰트 등 바이너리 제외) ----------
 
