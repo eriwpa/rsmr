@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EPUB Hash Compare 👻</title>
+<title>EPUB Hash Compare</title>
 <style>
   :root {
     color-scheme: light;
@@ -213,6 +213,42 @@
     margin-top: 14px;
     line-height: 1.6;
   }
+
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* ===================== 모바일 대응 ===================== */
+  @media (max-width: 700px) {
+    body { font-size: 13px; }
+    #app { padding: 10px; }
+    h1 { font-size: 15px; }
+
+    .box { padding: 8px 10px; }
+    .hash-row { gap: 6px 12px; }
+    label.chk { font-size: 12px; }
+
+    .btn-row { gap: 6px; }
+    button.btn { padding: 7px 10px; font-size: 12px; }
+    .tabbar button { padding: 7px 12px; font-size: 12px; }
+
+    /* 표는 가로 스크롤 대신, 셀 내용을 줄바꿈해서 화면 폭 안에 다 들어오게 함 */
+    table { table-layout: fixed; }
+    #listTable th:first-child, #listTable td:first-child { width: 34%; }
+    thead th, tbody td {
+      white-space: normal;
+      word-break: break-all;
+      overflow-wrap: anywhere;
+      max-width: none;
+      font-size: 11px;
+      padding: 4px;
+    }
+
+    .compare-file-row { flex-wrap: wrap; }
+    .compare-file-row .filebox { white-space: normal; word-break: break-all; }
+
+    .tree-row { flex-wrap: wrap; }
+    .tree-cell { flex: 1 1 45%; white-space: normal; word-break: break-all; }
+    .tree-name { flex-basis: 100%; }
+  }
 </style>
 </head>
 <body>
@@ -267,10 +303,12 @@
       <button class="btn compare" id="btnCompare">🔍 비교하기</button>
       <div class="result-label" id="compareResult">두 파일을 선택하고 비교하기를 누르세요.</div>
 
-      <table id="compareTable" style="display:none;">
-        <thead><tr><th>해시 종류</th><th>파일 A</th><th>파일 B</th><th>일치 여부</th></tr></thead>
-        <tbody id="compareTableBody"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table id="compareTable" style="display:none;">
+          <thead><tr><th>해시 종류</th><th>파일 A</th><th>파일 B</th><th>일치 여부</th></tr></thead>
+          <tbody id="compareTableBody"></tbody>
+        </table>
+      </div>
 
       <div class="box internal-box">
         <div class="box-title">🧬 내부 파일 비교 (두 파일 모두 EPUB/ZIP일 때)</div>
