@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPUB Hash Compare 👻</title>
+<style>
+  :root {
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f5f5f5 0%, #faf1f0 100%);
+    color: #333;
+    font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+    font-size: 14px;
+  }
+  #app { max-width: 1000px; margin: 0 auto; padding: 16px; }
+
+  h1 {
+    font-size: 17px;
+    margin: 0 0 12px;
+  }
+
+  .box {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.65);
+    padding: 10px 14px;
+    margin-bottom: 12px;
+  }
+  .box-title {
+    font-weight: bold;
+    margin: -2px 0 8px;
+    font-size: 13px;
+  }
+
+  .hash-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+  }
+  .hash-row .spacer { flex: 1; }
+
+  label.chk {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    user-select: none;
+  }
+  label.chk input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    border: 2px solid #999;
+    border-radius: 3px;
+    background: #fff;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+  label.chk input[type="checkbox"]:hover { border-color: #7fb3d5; }
+  label.chk input[type="checkbox"]:checked {
+    background: #b1f4ef;
+    border-color: #4fb3a9;
+  }
+
+  /* tabs */
+  .tabbar { display: flex; gap: 2px; margin-bottom: -1px; }
+  .tabbar button {
+    background: #f0e6e0;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    padding: 5px 14px;
+    font-weight: bold;
+    font-size: 12px;
+    color: #555;
+    cursor: pointer;
+  }
+  .tabbar button.active { background: #fef1ef; color: #2c2c2c; }
+  .tabbar button:hover { background: #f7e2da; }
+
+  .tabpane {
+    border: 1px solid #ccc;
+    border-radius: 0 6px 6px 6px;
+    background: rgba(255,255,255,0.5);
+    padding: 12px;
+  }
+  .tabpage { display: none; }
+  .tabpage.active { display: block; }
+
+  button.btn {
+    background: #fef1ef;
+    color: #2c2c2c;
+    border: 1px solid #c4c4c4;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  button.btn:hover { background: #f3e6d9; }
+  button.btn:active { background: #f7d5d3; }
+  button.btn:disabled { background: #eee; color: #aaa; border-color: #ddd; cursor: default; }
+
+  button.btn.add { background: #e8f5e9; border-color: #a5d6a7; }
+  button.btn.add:hover { background: #c8e6c9; }
+  button.btn.remove { background: #fff3e0; border-color: #ffcc80; }
+  button.btn.remove:hover { background: #ffe0b2; }
+  button.btn.clear { background: #f3e5f5; border-color: #ce93d8; }
+  button.btn.clear:hover { background: #e1bee7; }
+  button.btn.compare { background: #e3f2fd; border-color: #90caf9; font-size: 13px; padding: 6px 14px; }
+  button.btn.compare:hover { background: #bbdefb; }
+
+  .btn-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+
+  .drop-zone {
+    border: 1px dashed #bbb;
+    border-radius: 4px;
+    background: #fff;
+    min-height: 60px;
+    overflow: auto;
+    max-height: 260px;
+  }
+  .drop-zone.dragover { border-color: #7fb3d5; background: #eef7fb; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    background: #fff;
+  }
+  thead th {
+    background: #f3ecf7;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ccc;
+    padding: 4px 6px;
+    text-align: left;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  thead th:hover { background: #ecdff2; }
+  thead th .arrow { color: #888; font-size: 10px; margin-left: 3px; }
+  tbody td {
+    border-bottom: 1px solid #eee;
+    border-right: 1px solid #f2f2f2;
+    padding: 2px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+  }
+  tbody tr:nth-child(even) { background: #faf7fb; }
+  tbody tr.selected { background: #cfe8ff !important; font-weight: bold; }
+  tbody tr:hover { outline: 1px solid #bcd; outline-offset: -1px; }
+
+  .internal-box { margin-top: 10px; }
+  .note {
+    font-size: 12px;
+    color: #555;
+    margin: 4px 0 8px;
+    white-space: pre-line;
+  }
+
+  .compare-file-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .compare-file-row label { width: 58px; flex-shrink: 0; font-weight: bold; }
+  .compare-file-row .filebox {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #333;
+    min-height: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .compare-file-row .filebox.empty { color: #999; }
+
+  .result-label { font-weight: bold; font-size: 13px; margin: 8px 0; }
+  .result-label.ok { color: #1a7a1a; }
+  .result-label.bad { color: #b23b3b; }
+
+  .tree-row { display: flex; }
+  .tree-cell { padding: 2px 6px; border-bottom: 1px solid #eee; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tree-name { flex: 2; min-width: 0; }
+  .tree-size { flex: 1; min-width: 0; }
+  .tree-status { flex: 1; min-width: 0; }
+  .tree-folder { font-weight: bold; color: #555; background: #f7f4fa; }
+
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: #f5f5f5; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb { background: #e0d5ff; border-radius: 5px; }
+
+  input[type="file"] { display: none; }
+
+  footer.hint {
+    font-size: 11px;
+    color: #888;
+    margin-top: 14px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>EPUB Hash Compare - EPUB 해시값 비교 도구 (웹 버전)</h1>
+
+  <div class="box">
+    <div class="box-title">🔢 계산할 해시 종류 선택 (체크박스에 마우스를 올리면 설명이 나와요)</div>
+    <div class="hash-row" id="hashTypeRow"></div>
+  </div>
+
+  <div class="tabbar" id="tabbar">
+    <button data-tab="list" class="active">목록 보기</button>
+    <button data-tab="compare">두 파일 비교</button>
+  </div>
+  <div class="tabpane">
+
+    <!-- ===================== 탭 1: 목록 보기 ===================== -->
+    <div class="tabpage active" id="page-list">
+      <div class="btn-row">
+        <button class="btn add" id="btnAddList">📂 파일 추가</button>
+        <button class="btn remove" id="btnRemoveList">🗑️ 선택 삭제</button>
+        <button class="btn clear" id="btnClearList">🧹 전체 삭제</button>
+        <span class="spacer"></span>
+        <span class="note" id="listStatus" style="margin:0;"></span>
+      </div>
+      <div class="drop-zone" id="dropZoneList">
+        <table id="listTable">
+          <thead><tr id="listTableHead"></tr></thead>
+          <tbody id="listTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="box internal-box">
+        <div class="box-title">📄 선택한 파일의 EPUB 내부 파일별 해시</div>
+        <div id="internalTree" style="max-height:220px; overflow:auto; background:#fff; border:1px solid #ccc; border-radius:4px;"></div>
+      </div>
+    </div>
+
+    <!-- ===================== 탭 2: 두 파일 비교 ===================== -->
+    <div class="tabpage" id="page-compare">
+      <div class="compare-file-row">
+        <label>📄 파일 A:</label>
+        <div class="filebox empty" id="fileABox">여기로 파일을 드래그하거나 '선택' 버튼을 누르세요</div>
+        <button class="btn" id="btnPickA">📂 선택</button>
+      </div>
+      <div class="compare-file-row">
+        <label>📄 파일 B:</label>
+        <div class="filebox empty" id="fileBBox">여기로 파일을 드래그하거나 '선택' 버튼을 누르세요</div>
+        <button class="btn" id="btnPickB">📂 선택</button>
+      </div>
+      <button class="btn compare" id="btnCompare">🔍 비교하기</button>
+      <div class="result-label" id="compareResult">두 파일을 선택하고 비교하기를 누르세요.</div>
+
+      <table id="compareTable" style="display:none;">
+        <thead><tr><th>해시 종류</th><th>파일 A</th><th>파일 B</th><th>일치 여부</th></tr></thead>
+        <tbody id="compareTableBody"></tbody>
+      </table>
+
+      <div class="box internal-box">
+        <div class="box-title">🧬 내부 파일 비교 (두 파일 모두 EPUB/ZIP일 때)</div>
+        <div class="note" id="compareInternalNote">두 파일을 비교하면 내부 파일 구조도 함께 비교됩니다.</div>
+        <div id="compareInternalTree" style="max-height:260px; overflow:auto; background:#fff; border:1px solid #ccc; border-radius:4px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="hint">
+    이 페이지는 서버로 아무 것도 전송하지 않습니다 — 모든 해시 계산은 이 브라우저 안에서만 이루어집니다.<br>
+    브라우저 보안 정책상 파일의 전체 경로는 확인할 수 없어 "크기"만 표시합니다.<br>
+    SHA1/SHA256/SHA512는 브라우저 내장 Web Crypto API를 사용하므로, GitHub Pages(https)나 localhost가 아닌
+    파일을 그냥 더블클릭해서 연 화면(file://)에서는 계산되지 않을 수 있습니다.
+  </footer>
+</div>
+
+<input type="file" id="fileInputList" multiple accept=".epub,.zip,.txt,.7z">
+<input type="file" id="fileInputA" accept=".epub,.zip,.txt,.7z">
+<input type="file" id="fileInputB" accept=".epub,.zip,.txt,.7z">
+
+<script>
+"use strict";
+
+/* ============================================================
+ * 공통 유틸 / 순수 JS 해시 구현 (MD5, CRC32) + Web Crypto(SHA1/256/512)
+ * ============================================================ */
+
+function bytesToHex(bytes, upper) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += bytes[i].toString(16).padStart(2, "0");
+  return upper ? s.toUpperCase() : s;
+}
+
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) crc = CRC32_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  crc = (crc ^ 0xffffffff) >>> 0;
+  const out = new Uint8Array(4);
+  out[0] = (crc >>> 24) & 0xff; out[1] = (crc >>> 16) & 0xff; out[2] = (crc >>> 8) & 0xff; out[3] = crc & 0xff;
+  return bytesToHex(out, true);
+}
+
+function md5(msg) {
+  const origLenBits = msg.length * 8;
+  let paddedLen = msg.length + 1;
+  while (paddedLen % 64 !== 56) paddedLen++;
+  paddedLen += 8;
+
+  const padded = new Uint8Array(paddedLen);
+  padded.set(msg);
+  padded[msg.length] = 0x80;
+
+  const dv = new DataView(padded.buffer);
+  const lo = origLenBits >>> 0;
+  const hi = Math.floor(origLenBits / 0x100000000) >>> 0;
+  dv.setUint32(paddedLen - 8, lo, true);
+  dv.setUint32(paddedLen - 4, hi, true);
+
+  const K = new Int32Array([
+    -680876936, -389564586, 606105819, -1044525330, -176418897, 1200080426, -1473231341, -45705983,
+    1770035416, -1958414417, -42063, -1990404162, 1804603682, -40341101, -1502002290, 1236535329,
+    -165796510, -1069501632, 643717713, -373897302, -701558691, 38016083, -660478335, -405537848,
+    568446438, -1019803690, -187363961, 1163531501, -1444681467, -51403784, 1735328473, -1926607734,
+    -378558, -2022574463, 1839030562, -35309556, -1530992060, 1272893353, -155497632, -1094730640,
+    681279174, -358537222, -722521979, 76029189, -640364487, -421815835, 530742520, -995338651,
+    -198630844, 1126891415, -1416354905, -57434055, 1700485571, -1894986606, -1051523, -2054922799,
+    1873313359, -30611744, -1560198380, 1309151649, -145523070, -1120210379, 718787259, -343485551,
+  ]);
+  const S = [
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+  ];
+
+  let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+  const numChunks = paddedLen / 64;
+  const M = new Int32Array(16);
+
+  for (let chunk = 0; chunk < numChunks; chunk++) {
+    const base = chunk * 64;
+    for (let i = 0; i < 16; i++) M[i] = dv.getInt32(base + i * 4, true);
+
+    let A = a0, B = b0, C = c0, D = d0;
+    for (let i = 0; i < 64; i++) {
+      let F, g;
+      if (i < 16) { F = (B & C) | (~B & D); g = i; }
+      else if (i < 32) { F = (D & B) | (~D & C); g = (5 * i + 1) % 16; }
+      else if (i < 48) { F = B ^ C ^ D; g = (3 * i + 5) % 16; }
+      else { F = C ^ (B | ~D); g = (7 * i) % 16; }
+      F = (F + A + K[i] + M[g]) | 0;
+      A = D; D = C; C = B;
+      const s = S[i];
+      B = (B + ((F << s) | (F >>> (32 - s)))) | 0;
+    }
+    a0 = (a0 + A) | 0; b0 = (b0 + B) | 0; c0 = (c0 + C) | 0; d0 = (d0 + D) | 0;
+  }
+
+  const out = new Uint8Array(16);
+  const outDv = new DataView(out.buffer);
+  outDv.setInt32(0, a0, true); outDv.setInt32(4, b0, true);
+  outDv.setInt32(8, c0, true); outDv.setInt32(12, d0, true);
+  return bytesToHex(out, true);
+}
+
+const SUBTLE_ALGO = { SHA1: "SHA-1", SHA256: "SHA-256", SHA512: "SHA-512" };
+
+async function computeHashes(bytes, hashTypes) {
+  const result = {};
+  if (hashTypes.includes("MD5")) result.MD5 = md5(bytes);
+  if (hashTypes.includes("CRC32")) result.CRC32 = crc32(bytes);
+  for (const key of ["SHA1", "SHA256", "SHA512"]) {
+    if (!hashTypes.includes(key)) continue;
+    if (!(window.crypto && window.crypto.subtle)) { result[key] = "(사용 불가: https/localhost 필요)"; continue; }
+    const digest = await crypto.subtle.digest(SUBTLE_ALGO[key], bytes);
+    result[key] = bytesToHex(new Uint8Array(digest), true);
+  }
+  return result;
+}
+
+/* ============================================================
+ * ZIP(EPUB) 리더 - 외부 라이브러리 없이 DataView + DecompressionStream만 사용
+ * ============================================================ */
+
+function findEOCD(buf) {
+  const dv = new DataView(buf);
+  if (buf.byteLength < 22) return null;
+  const maxBack = Math.min(buf.byteLength, 22 + 0xffff);
+  for (let i = buf.byteLength - 22; i >= buf.byteLength - maxBack && i >= 0; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) return i;
+  }
+  return null;
+}
+
+function parseZipEntries(buf) {
+  const eocdOffset = findEOCD(buf);
+  if (eocdOffset === null) return null;
+
+  const dv = new DataView(buf);
+  const cdEntryCount = dv.getUint16(eocdOffset + 10, true);
+  const cdOffset = dv.getUint32(eocdOffset + 16, true);
+
+  const entries = [];
+  let p = cdOffset;
+  const utf8 = new TextDecoder("utf-8");
+  const latin1 = new TextDecoder("latin1");
+
+  for (let i = 0; i < cdEntryCount; i++) {
+    if (p + 46 > buf.byteLength || dv.getUint32(p, true) !== 0x02014b50) break;
+    const flags = dv.getUint16(p + 8, true);
+    const method = dv.getUint16(p + 10, true);
+    const crc32Stored = dv.getUint32(p + 16, true);
+    const compressedSize = dv.getUint32(p + 20, true);
+    const uncompressedSize = dv.getUint32(p + 24, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const commentLen = dv.getUint16(p + 32, true);
+    const localHeaderOffset = dv.getUint32(p + 42, true);
+
+    const nameBytes = new Uint8Array(buf, p + 46, nameLen);
+    const name = ((flags & 0x800) !== 0 ? utf8 : latin1).decode(nameBytes);
+
+    entries.push({
+      name, method, crc32Stored, compressedSize, uncompressedSize, localHeaderOffset,
+      isDirectory: name.endsWith("/"),
+    });
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return entries;
+}
+
+async function extractZipEntry(buf, entry) {
+  const dv = new DataView(buf);
+  const p = entry.localHeaderOffset;
+  if (dv.getUint32(p, true) !== 0x04034b50) throw new Error("bad local header: " + entry.name);
+  const nameLen = dv.getUint16(p + 26, true);
+  const extraLen = dv.getUint16(p + 28, true);
+  const dataStart = p + 30 + nameLen + extraLen;
+  const compressed = new Uint8Array(buf, dataStart, entry.compressedSize);
+
+  if (entry.method === 0) return new Uint8Array(compressed);
+  if (entry.method === 8) {
+    if (typeof DecompressionStream === "undefined") {
+      throw new Error("이 브라우저는 압축 해제(DecompressionStream)를 지원하지 않습니다.");
+    }
+    const ds = new DecompressionStream("deflate-raw");
+    const writer = ds.writable.getWriter();
+    writer.write(compressed);
+    writer.close();
+    const chunks = [];
+    const reader = ds.readable.getReader();
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      total += value.length;
+    }
+    const out = new Uint8Array(total);
+    let off = 0;
+    for (const c of chunks) { out.set(c, off); off += c.length; }
+    return out;
+  }
+  throw new Error("지원하지 않는 압축 방식(" + entry.method + "): " + entry.name);
+}
+
+async function getEpubInternalEntries(buf, hashTypes) {
+  const entries = parseZipEntries(buf);
+  if (entries === null) return null;
+  const result = [];
+  for (const entry of entries) {
+    if (entry.isDirectory) continue;
+    const data = await extractZipEntry(buf, entry);
+    const hashes = await computeHashes(data, hashTypes);
+    result.push({ name: entry.name, size: data.length, hashes });
+  }
+  return result;
+}
+
+/* ============================================================
+ * 앱 상태 / 공통 헬퍼
+ * ============================================================ */
+
+const HASH_TYPES = ["MD5", "SHA1", "SHA256", "SHA512", "CRC32"];
+const HASH_TYPE_TOOLTIPS = {
+  MD5: "MD5 (128비트)\n가장 널리 쓰이는 파일 무결성 체크섬.\n속도는 빠르지만 암호학적으로는 취약해서,\n다운로드/복사 후 파일이 손상되지 않았는지 확인하는 용도로만 적합합니다.",
+  SHA1: "SHA1 (160비트)\nMD5보다 조금 더 길고 안전하지만\n역시 암호학적으로 취약하다고 판정된 구형 해시입니다.\n무결성 확인용으로는 여전히 널리 쓰입니다.",
+  SHA256: "SHA256 (256비트)\nSHA-2 계열의 표준 해시로 현재 가장 널리 쓰이는\n안전한 해시값입니다. 파일 위·변조 검증에 적합합니다.",
+  SHA512: "SHA512 (512비트)\nSHA256보다 값이 더 길고 더 안전하지만,\n계산 시간이 조금 더 걸립니다.",
+  CRC32: "CRC32 (32비트)\n암호화 해시가 아니라 단순 오류 검출용 체크섬입니다.\nZIP/EPUB 파일 내부에도 기본으로 저장되어 있어\n전송 중 손상 여부를 빠르게 확인할 때 씁니다.",
+};
+
+const DUPLICATE_GROUP_COLORS = [
+  "#ffd0d0", "#ffe0bf", "#fff3b0", "#cdf2c9", "#c2e4ff", "#ddccf5", "#ffd0ea", "#dfe3e6", "#f0dfa0",
+];
+
+const state = {
+  hashChecks: { MD5: true, SHA1: false, SHA256: false, SHA512: false, CRC32: false },
+  internalCheck: true,
+  listFiles: [],       // [{id, name, size, bytes, overall:{}, internal: [...] or null}]
+  selectedListId: null,
+  listSort: { col: null, asc: true },
+  compareA: null,      // {name, bytes}
+  compareB: null,
+};
+
+function getSelectedHashTypes() {
+  return HASH_TYPES.filter((ht) => state.hashChecks[ht]);
+}
+
+function formatSize(n) {
+  if (n < 1024) return n + " B";
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+  return (n / (1024 * 1024)).toFixed(2) + " MB";
+}
+
+function isZipLikeName(name) {
+  return /\.(epub|zip)$/i.test(name);
+}
+
+/* ============================================================
+ * 상단 해시 종류 체크박스
+ * ============================================================ */
+
+function buildHashTypeRow() {
+  const row = document.getElementById("hashTypeRow");
+  row.innerHTML = "";
+  for (const ht of HASH_TYPES) {
+    const label = document.createElement("label");
+    label.className = "chk";
+    label.title = HASH_TYPE_TOOLTIPS[ht];
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = state.hashChecks[ht];
+    input.addEventListener("change", () => {
+      state.hashChecks[ht] = input.checked;
+      renderListTable();
+      renderInternalTree();
+    });
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(ht));
+    row.appendChild(label);
+  }
+
+  const spacer = document.createElement("span");
+  spacer.className = "spacer";
+  row.appendChild(spacer);
+
+  const internalLabel = document.createElement("label");
+  internalLabel.className = "chk";
+  internalLabel.title = "체크하면 EPUB(zip) 안에 들어있는 파일 하나하나의 해시도 함께 계산합니다.\n내부 파일이 많은 EPUB는 계산이 더 오래 걸릴 수 있습니다.";
+  const internalInput = document.createElement("input");
+  internalInput.type = "checkbox";
+  internalInput.checked = state.internalCheck;
+  internalInput.addEventListener("change", () => { state.internalCheck = internalInput.checked; });
+  internalLabel.appendChild(internalInput);
+  internalLabel.appendChild(document.createTextNode("EPUB 내부 파일별 해시도 계산"));
+  row.appendChild(internalLabel);
+}
+
+/* ============================================================
+ * 탭 전환
+ * ============================================================ */
+
+document.getElementById("tabbar").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-tab]");
+  if (!btn) return;
+  for (const b of document.querySelectorAll("#tabbar button")) b.classList.toggle("active", b === btn);
+  for (const p of document.querySelectorAll(".tabpage")) p.classList.toggle("active", p.id === "page-" + btn.dataset.tab);
+});
+
+/* ============================================================
+ * 탭 1: 목록 보기
+ * ============================================================ */
+
+let listFileIdSeq = 1;
+
+async function addFilesToList(fileList) {
+  const files = Array.from(fileList).filter((f) => /\.(epub|zip|txt|7z)$/i.test(f.name));
+  if (!files.length) return;
+
+  const statusEl = document.getElementById("listStatus");
+  document.getElementById("btnAddList").disabled = true;
+  const types = getSelectedHashTypes();
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    statusEl.textContent = `처리 중... (${i + 1}/${files.length}) ${f.name}`;
+    const buf = await f.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    const overall = await computeHashes(bytes, types);
+    let internal = null;
+    if (state.internalCheck) {
+      try { internal = await getEpubInternalEntries(buf, types); } catch (e) { internal = null; }
+    }
+    state.listFiles.push({
+      id: listFileIdSeq++, name: f.name, size: bytes.length, bytes, overall, internal,
+    });
+  }
+
+  statusEl.textContent = "";
+  document.getElementById("btnAddList").disabled = false;
+  renderListTable();
+}
+
+document.getElementById("btnAddList").addEventListener("click", () => document.getElementById("fileInputList").click());
+document.getElementById("fileInputList").addEventListener("change", (e) => {
+  addFilesToList(e.target.files);
+  e.target.value = "";
+});
+
+const dropZoneList = document.getElementById("dropZoneList");
+dropZoneList.addEventListener("dragover", (e) => { e.preventDefault(); dropZoneList.classList.add("dragover"); });
+dropZoneList.addEventListener("dragleave", () => dropZoneList.classList.remove("dragover"));
+dropZoneList.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZoneList.classList.remove("dragover");
+  addFilesToList(e.dataTransfer.files);
+});
+
+document.getElementById("btnRemoveList").addEventListener("click", () => {
+  const table = document.getElementById("listTableBody");
+  const selectedIds = new Set(
+    Array.from(table.querySelectorAll("tr.row-selected")).map((tr) => Number(tr.dataset.id))
+  );
+  if (!selectedIds.size && state.selectedListId !== null) selectedIds.add(state.selectedListId);
+  state.listFiles = state.listFiles.filter((f) => !selectedIds.has(f.id));
+  if (selectedIds.has(state.selectedListId)) state.selectedListId = null;
+  renderListTable();
+  renderInternalTree();
+});
+
+document.getElementById("btnClearList").addEventListener("click", () => {
+  state.listFiles = [];
+  state.selectedListId = null;
+  renderListTable();
+  renderInternalTree();
+});
+
+function computeDuplicateColors(types) {
+  if (!types.length) return new Map();
+  const keyToIds = new Map();
+  for (const f of state.listFiles) {
+    const key = types.map((ht) => (f.overall[ht] || "-")).join("|");
+    if (!keyToIds.has(key)) keyToIds.set(key, []);
+    keyToIds.get(key).push(f.id);
+  }
+  const idToColor = new Map();
+  let colorIdx = 0;
+  for (const ids of keyToIds.values()) {
+    if (ids.length < 2) continue;
+    const color = DUPLICATE_GROUP_COLORS[colorIdx % DUPLICATE_GROUP_COLORS.length];
+    for (const id of ids) idToColor.set(id, color);
+    colorIdx++;
+  }
+  return idToColor;
+}
+
+function renderListTable() {
+  const types = getSelectedHashTypes();
+  const theadRow = document.getElementById("listTableHead");
+  const tbody = document.getElementById("listTableBody");
+
+  const columns = ["파일명", ...types, "크기"];
+  theadRow.innerHTML = "";
+  columns.forEach((label, colIdx) => {
+    const th = document.createElement("th");
+    th.textContent = label;
+    if (state.listSort.col === colIdx) {
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = state.listSort.asc ? "▲" : "▼";
+      th.appendChild(arrow);
+    }
+    th.addEventListener("click", () => {
+      if (state.listSort.col === colIdx) state.listSort.asc = !state.listSort.asc;
+      else { state.listSort.col = colIdx; state.listSort.asc = true; }
+      renderListTable();
+    });
+    theadRow.appendChild(th);
+  });
+
+  const idToColor = computeDuplicateColors(types);
+
+  let rows = state.listFiles.slice();
+  if (state.listSort.col !== null) {
+    const colIdx = state.listSort.col;
+    rows.sort((a, b) => {
+      const va = colIdx === 0 ? a.name : colIdx === columns.length - 1 ? a.size : (a.overall[types[colIdx - 1]] || "");
+      const vb = colIdx === 0 ? b.name : colIdx === columns.length - 1 ? b.size : (b.overall[types[colIdx - 1]] || "");
+      if (typeof va === "number" && typeof vb === "number") return va - vb;
+      return String(va).localeCompare(String(vb));
+    });
+    if (!state.listSort.asc) rows.reverse();
+  }
+
+  tbody.innerHTML = "";
+  for (const f of rows) {
+    const tr = document.createElement("tr");
+    tr.dataset.id = f.id;
+    const color = idToColor.get(f.id);
+    if (color) tr.style.background = color;
+    if (f.id === state.selectedListId) tr.classList.add("selected");
+
+    const tdName = document.createElement("td");
+    tdName.textContent = f.name;
+    tr.appendChild(tdName);
+
+    for (const ht of types) {
+      const td = document.createElement("td");
+      td.textContent = f.overall[ht] || "-";
+      tr.appendChild(td);
+    }
+
+    const tdSize = document.createElement("td");
+    tdSize.textContent = formatSize(f.size);
+    tr.appendChild(tdSize);
+
+    tr.addEventListener("click", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        tr.classList.toggle("row-selected");
+      } else {
+        for (const other of tbody.querySelectorAll("tr")) other.classList.remove("selected", "row-selected");
+        tr.classList.add("selected");
+        state.selectedListId = f.id;
+        renderInternalTree();
+      }
+    });
+
+    tbody.appendChild(tr);
+  }
+}
+
+function renderInternalTree() {
+  const container = document.getElementById("internalTree");
+  container.innerHTML = "";
+  const f = state.listFiles.find((x) => x.id === state.selectedListId);
+  if (!f || !f.internal) {
+    const div = document.createElement("div");
+    div.className = "note";
+    div.style.padding = "8px";
+    div.textContent = f ? "(EPUB/ZIP 아님 또는 내부 해시 미계산)" : "목록에서 파일을 선택하세요.";
+    container.appendChild(div);
+    return;
+  }
+
+  const types = getSelectedHashTypes();
+  const header = document.createElement("div");
+  header.className = "tree-row tree-folder";
+  header.innerHTML = `<div class="tree-cell tree-name">내부 파일</div>` + types.map((ht) => `<div class="tree-cell tree-status">${ht}</div>`).join("");
+  container.appendChild(header);
+
+  for (const entry of f.internal) {
+    const row = document.createElement("div");
+    row.className = "tree-row";
+    row.innerHTML = `<div class="tree-cell tree-name">${escapeHtml(entry.name)}</div>` +
+      types.map((ht) => `<div class="tree-cell tree-status">${escapeHtml(entry.hashes[ht] || "-")}</div>`).join("");
+    container.appendChild(row);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ============================================================
+ * 탭 2: 두 파일 비교
+ * ============================================================ */
+
+async function pickCompareFile(which) {
+  document.getElementById(which === "a" ? "fileInputA" : "fileInputB").click();
+}
+document.getElementById("btnPickA").addEventListener("click", () => pickCompareFile("a"));
+document.getElementById("btnPickB").addEventListener("click", () => pickCompareFile("b"));
+
+async function loadCompareFile(which, file) {
+  if (!file) return;
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const data = { name: file.name, size: bytes.length, bytes, buf };
+  if (which === "a") state.compareA = data; else state.compareB = data;
+  const box = document.getElementById(which === "a" ? "fileABox" : "fileBBox");
+  box.textContent = file.name;
+  box.classList.remove("empty");
+}
+document.getElementById("fileInputA").addEventListener("change", (e) => { loadCompareFile("a", e.target.files[0]); e.target.value = ""; });
+document.getElementById("fileInputB").addEventListener("change", (e) => { loadCompareFile("b", e.target.files[0]); e.target.value = ""; });
+
+for (const [boxId, which] of [["fileABox", "a"], ["fileBBox", "b"]]) {
+  const box = document.getElementById(boxId);
+  box.addEventListener("dragover", (e) => e.preventDefault());
+  box.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f) loadCompareFile(which, f);
+  });
+}
+
+document.getElementById("btnCompare").addEventListener("click", async () => {
+  const resultLabel = document.getElementById("compareResult");
+  if (!state.compareA || !state.compareB) {
+    resultLabel.textContent = "파일 A와 B를 모두 선택해 주세요.";
+    resultLabel.className = "result-label bad";
+    return;
+  }
+  const types = getSelectedHashTypes();
+  if (!types.length) {
+    resultLabel.textContent = "해시 종류를 최소 하나 이상 선택해 주세요.";
+    resultLabel.className = "result-label bad";
+    return;
+  }
+
+  document.getElementById("btnCompare").disabled = true;
+  resultLabel.textContent = "비교 중...";
+  resultLabel.className = "result-label";
+
+  const hashesA = await computeHashes(state.compareA.bytes, types);
+  const hashesB = await computeHashes(state.compareB.bytes, types);
+
+  const table = document.getElementById("compareTable");
+  const tbody = document.getElementById("compareTableBody");
+  tbody.innerHTML = "";
+  table.style.display = "";
+
+  let allMatch = true;
+  for (const ht of types) {
+    const va = hashesA[ht] || "-";
+    const vb = hashesB[ht] || "-";
+    const match = va === vb;
+    if (!match) allMatch = false;
+    const tr = document.createElement("tr");
+    const statusColor = match ? "#c8ffc8" : "#ffc8c8";
+    tr.innerHTML = `<td>${ht}</td><td>${escapeHtml(va)}</td><td>${escapeHtml(vb)}</td><td style="background:${statusColor}">${match ? "일치" : "다름"}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  if (allMatch) {
+    resultLabel.textContent = "결과: 두 파일은 완전히 동일합니다 (모든 해시 일치)";
+    resultLabel.className = "result-label ok";
+  } else {
+    resultLabel.textContent = "결과: 두 파일은 서로 다릅니다 (일부 해시 불일치)";
+    resultLabel.className = "result-label bad";
+  }
+
+  await updateInternalCompare(types);
+  document.getElementById("btnCompare").disabled = false;
+});
+
+async function updateInternalCompare(types) {
+  const note = document.getElementById("compareInternalNote");
+  const treeEl = document.getElementById("compareInternalTree");
+  treeEl.innerHTML = "";
+
+  let entriesA = null, entriesB = null;
+  try { entriesA = await getEpubInternalEntries(state.compareA.buf, types); } catch (e) { entriesA = null; }
+  try { entriesB = await getEpubInternalEntries(state.compareB.buf, types); } catch (e) { entriesB = null; }
+
+  if (!entriesA && !entriesB) { note.textContent = "두 파일 모두 EPUB/ZIP 형식이 아니라 내부 파일 비교를 할 수 없습니다."; return; }
+  if (!entriesA || !entriesB) { note.textContent = "한쪽 파일만 EPUB/ZIP 형식이라 내부 파일 비교를 할 수 없습니다."; return; }
+
+  const mapA = new Map(entriesA.map((e) => [e.name, e]));
+  const mapB = new Map(entriesB.map((e) => [e.name, e]));
+  const allPaths = Array.from(new Set([...mapA.keys(), ...mapB.keys()])).sort();
+
+  let diffCount = 0;
+  const combined = [];
+  for (const path of allPaths) {
+    const ea = mapA.get(path), eb = mapB.get(path);
+    let status;
+    if (!ea) { status = "B에만 있음"; diffCount++; }
+    else if (!eb) { status = "A에만 있음"; diffCount++; }
+    else {
+      const same = types.every((ht) => ea.hashes[ht] === eb.hashes[ht]);
+      status = same ? "동일" : "다름";
+      if (!same) diffCount++;
+    }
+    combined.push({ path, ea, eb, status });
+  }
+
+  const sameStructure = mapA.size === mapB.size && [...mapA.keys()].every((k) => mapB.has(k));
+  note.textContent =
+    (sameStructure ? "구조가 같은 EPUB/ZIP입니다. " : "내부 파일 구성이 서로 다릅니다. ") +
+    `내부 파일 ${allPaths.length}개 중 ${allPaths.length - diffCount}개 동일, ${diffCount}개 다름/누락`;
+
+  const statusColors = { "동일": "#c8f7c5", "다름": "#ffc8c8", "A에만 있음": "#ffe6b3", "B에만 있음": "#ffe6b3" };
+  const header = document.createElement("div");
+  header.className = "tree-row tree-folder";
+  header.innerHTML = `<div class="tree-cell tree-name">내부 경로</div><div class="tree-cell tree-size">크기 A</div><div class="tree-cell tree-size">크기 B</div><div class="tree-cell tree-status">상태</div>`;
+  treeEl.appendChild(header);
+
+  for (const item of combined) {
+    const row = document.createElement("div");
+    row.className = "tree-row";
+    row.style.background = statusColors[item.status] || "";
+    const sizeA = item.ea ? item.ea.size : "-";
+    const sizeB = item.eb ? item.eb.size : "-";
+    row.innerHTML =
+      `<div class="tree-cell tree-name">${escapeHtml(item.path)}</div>` +
+      `<div class="tree-cell tree-size">${sizeA}</div>` +
+      `<div class="tree-cell tree-size">${sizeB}</div>` +
+      `<div class="tree-cell tree-status">${item.status}</div>`;
+    treeEl.appendChild(row);
+  }
+}
+
+/* ============================================================
+ * 초기화
+ * ============================================================ */
+
+buildHashTypeRow();
+renderListTable();
+renderInternalTree();
+</script>
+</body>
+</html>
