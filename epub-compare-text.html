@@ -595,11 +595,240 @@
         </div>
     </div>
 
+    <!-- 문단 정렬 + diff_match_patch 연산을 메인 스레드 밖에서 처리하기 위한 백그라운드 워커.
+         diff_match_patch는 DOM에 의존하지 않는 순수 JS라 워커 안에서도 그대로 동작한다. -->
+    <script id="diffWorkerCode" type="text/template">
+        importScripts('https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js');
+
+        const WATERMARK_CHARS = {
+            0x2060: { tag: 'WJ', title: 'U+2060 Word Joiner (워터마크 의심 문자)' },
+            0x2063: { tag: 'IS', title: 'U+2063 Invisible Separator (워터마크 의심 문자)' }
+        };
+
+        function stripWatermarkChars(text) {
+            let out = '';
+            for (const ch of text) {
+                if (!WATERMARK_CHARS[ch.codePointAt(0)]) out += ch;
+            }
+            return out;
+        }
+
+        function renderTextWithWatermarks(text) {
+            let result = '';
+            for (const ch of text) {
+                if (ch === '&') { result += '&amp;'; continue; }
+                if (ch === '<') { result += '&lt;'; continue; }
+                if (ch === '>') { result += '&gt;'; continue; }
+                const info = WATERMARK_CHARS[ch.codePointAt(0)];
+                if (info) {
+                    result += `<span class="watermark-char" title="${info.title}">[${info.tag}]</span>`;
+                } else {
+                    result += ch;
+                }
+            }
+            return result;
+        }
+
+        function containsWatermark(text) {
+            if (!text) return false;
+            for (const ch of text) {
+                if (WATERMARK_CHARS[ch.codePointAt(0)]) return true;
+            }
+            return false;
+        }
+
+        function joinNormalized(lines) {
+            return lines.map(stripWatermarkChars).join(' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function alignParagraphs(a, b) {
+            const dmp = new diff_match_patch();
+            const linesA = a.map(stripWatermarkChars).join('\n') + '\n';
+            const linesB = b.map(stripWatermarkChars).join('\n') + '\n';
+            const { chars1, chars2 } = dmp.diff_linesToChars_(linesA, linesB);
+            const diffs = dmp.diff_main(chars1, chars2, false);
+
+            const ops = [];
+            let idxA = 0, idxB = 0;
+            for (const [op, chars] of diffs) {
+                if (op === 0) {
+                    for (let i = 0; i < chars.length; i++) {
+                        ops.push({ op: 0, textA: a[idxA], textB: b[idxB] });
+                        idxA++; idxB++;
+                    }
+                } else if (op === -1) {
+                    for (let i = 0; i < chars.length; i++) {
+                        ops.push({ op: -1, textA: a[idxA] });
+                        idxA++;
+                    }
+                } else {
+                    for (let i = 0; i < chars.length; i++) {
+                        ops.push({ op: 1, textB: b[idxB] });
+                        idxB++;
+                    }
+                }
+            }
+            return ops;
+        }
+
+        function buildParagraphDiff(paragraphsA, paragraphsB) {
+            const ops = alignParagraphs(paragraphsA, paragraphsB);
+            const rows = [];
+            let i = 0;
+
+            while (i < ops.length) {
+                if (ops[i].op === 0) {
+                    rows.push({ type: 'match', left: ops[i].textA, right: ops[i].textB });
+                    i++;
+                    continue;
+                }
+
+                const delLines = [], insLines = [];
+                while (i < ops.length && ops[i].op !== 0) {
+                    if (ops[i].op === -1) delLines.push(ops[i].textA);
+                    else insLines.push(ops[i].textB);
+                    i++;
+                }
+
+                if (delLines.length === 0) {
+                    for (const line of insLines) rows.push({ type: 'added', left: null, right: line });
+                } else if (insLines.length === 0) {
+                    for (const line of delLines) rows.push({ type: 'removed', left: line, right: null });
+                } else {
+                    const isReflow = joinNormalized(delLines) === joinNormalized(insLines);
+                    rows.push({ type: 'block', leftLines: delLines, rightLines: insLines, isReflow });
+                }
+            }
+            return rows;
+        }
+
+        function renderChangedPair(leftText, rightText) {
+            const dmp = new diff_match_patch();
+            const diffs = dmp.diff_main(leftText, rightText);
+            dmp.diff_cleanupSemantic(diffs);
+
+            let left = '', right = '';
+            for (const [op, text] of diffs) {
+                const esc = renderTextWithWatermarks(text);
+                if (op === 0) { left += esc; right += esc; }
+                else if (op === -1) { left += `<span class="removed">${esc}</span>`; }
+                else if (op === 1) { right += `<span class="added">${esc}</span>`; }
+            }
+            return { left, right };
+        }
+
+        function buildRowHtml(row, idx) {
+            if (row.type === 'block' && row.isReflow) {
+                const leftHtml = row.leftLines.map(renderTextWithWatermarks).join('<br><br>');
+                const rightHtml = row.rightLines.map(renderTextWithWatermarks).join('<br><br>');
+                const leftCellClass = row.leftLines.some(containsWatermark) ? ' cell-watermark' : '';
+                const rightCellClass = row.rightLines.some(containsWatermark) ? ' cell-watermark' : '';
+
+                return `<div class="reflow-marker">◆ 문단 병합/분리됨 (내용 동일)</div>
+            <div class="compare-row row-reflow" id="row-${idx}">
+                <div class="compare-cell${leftCellClass}">${leftHtml}</div>
+                <div class="compare-cell${rightCellClass}">${rightHtml}</div>
+            </div>`;
+            }
+
+            let leftHtml, rightHtml, rowClass, leftRaw, rightRaw;
+
+            if (row.type === 'match') {
+                leftHtml = renderTextWithWatermarks(row.left);
+                rightHtml = renderTextWithWatermarks(row.right);
+                rowClass = 'row-match';
+                leftRaw = row.left;
+                rightRaw = row.right;
+            } else if (row.type === 'block') {
+                leftRaw = row.leftLines.join('\n\n');
+                rightRaw = row.rightLines.join('\n\n');
+                const rendered = renderChangedPair(leftRaw, rightRaw);
+                leftHtml = rendered.left;
+                rightHtml = rendered.right;
+                rowClass = 'row-changed';
+            } else if (row.type === 'removed') {
+                leftHtml = `<span class="text-unique-left">${renderTextWithWatermarks(row.left)}</span>`;
+                rightHtml = `<span class="placeholder-empty">(파일 B에 없음)</span>`;
+                rowClass = 'row-removed';
+                leftRaw = row.left;
+            } else {
+                leftHtml = `<span class="placeholder-empty">(파일 A에 없음)</span>`;
+                rightHtml = `<span class="text-unique-right">${renderTextWithWatermarks(row.right)}</span>`;
+                rowClass = 'row-added';
+                rightRaw = row.right;
+            }
+
+            const leftCellClass = containsWatermark(leftRaw) ? ' cell-watermark' : '';
+            const rightCellClass = containsWatermark(rightRaw) ? ' cell-watermark' : '';
+
+            return `<div class="compare-row ${rowClass}" id="row-${idx}">
+                <div class="compare-cell${leftCellClass}">${leftHtml}</div>
+                <div class="compare-cell${rightCellClass}">${rightHtml}</div>
+            </div>`;
+        }
+
+        function computeVisibility(length, mismatchIdx, context) {
+            const visible = new Array(length).fill(false);
+            for (const idx of mismatchIdx) {
+                for (let j = Math.max(0, idx - context); j <= Math.min(length - 1, idx + context); j++) {
+                    visible[j] = true;
+                }
+            }
+            return visible;
+        }
+
+        self.onmessage = function(e) {
+            try {
+                const { paragraphsA, paragraphsB } = e.data;
+                const rows = buildParagraphDiff(paragraphsA, paragraphsB);
+
+                const mismatchIndices = [];
+                rows.forEach((row, idx) => {
+                    if (row.type === 'match') return;
+                    if (row.type === 'block' && row.isReflow) return;
+                    mismatchIndices.push(idx);
+                });
+
+                const emptyHtml = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">두 파일의 문단 내용이 동일합니다</div></div>`;
+
+                // 행 HTML은 뷰 모드(full/summary/onlyDiff)가 달라도 내용이 같으므로 한 번만
+                // 만들어 재사용한다 - 문자 단위 diff(diff_match_patch)는 계산 비용이 커서
+                // 예전처럼 뷰 모드마다 다시 만들면 같은 연산을 3번 반복하게 된다.
+                const rowHtmlCache = rows.map((row, idx) => buildRowHtml(row, idx));
+                const fullHtml = rowHtmlCache.join('') || emptyHtml;
+
+                function buildContextHtmlCached(context) {
+                    const visible = computeVisibility(rows.length, mismatchIndices, context);
+                    let html = '';
+                    let i = 0;
+                    while (i < rows.length) {
+                        if (visible[i]) { html += rowHtmlCache[i]; i++; continue; }
+                        let j = i;
+                        while (j < rows.length && !visible[j]) j++;
+                        html += `<div class="collapsed-divider">── 동일한 문단 ${j - i}개 생략 ──</div>`;
+                        i = j;
+                    }
+                    return html || emptyHtml;
+                }
+
+                self.postMessage({
+                    mismatchIndices,
+                    viewHtmlCache: {
+                        full: fullHtml,
+                        summary: buildContextHtmlCached(3),
+                        onlyDiff: buildContextHtmlCached(0)
+                    }
+                });
+            } catch (err) {
+                self.postMessage({ error: String(err && err.message || err) });
+            }
+        };
+    </script>
+
     <script>
         let file1 = null, file2 = null;
         let name1 = '', name2 = '';
 
-        let allRows = [];
         let mismatchIndices = [];
         let currentMismatchPointer = -1;
         let lastCurrentRowIdx = null;
@@ -862,8 +1091,31 @@
             return paragraphs;
         }
 
+        // UTF-8로 열어봤을 때 앞부분에 깨진 문자(�)가 많으면 EUC-KR로 저장된 한글 txt로
+        // 보고 다시 읽는다. 전체를 검사하면 느리므로 앞 5,000자만 표본 검사한다.
+        function readTxtWithEncodingFallback(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const text = e.target.result || "";
+                    const sample = text.substring(0, 5000);
+                    const brokenCount = (sample.match(/�/g) || []).length;
+                    if (brokenCount >= 10) {
+                        const fallbackReader = new FileReader();
+                        fallbackReader.onload = e2 => resolve(e2.target.result || "");
+                        fallbackReader.onerror = e2 => reject(e2);
+                        fallbackReader.readAsText(file, 'EUC-KR');
+                    } else {
+                        resolve(text);
+                    }
+                };
+                reader.onerror = e => reject(e);
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
         async function extractParagraphsFromTxt(file) {
-            const text = await file.text();
+            const text = await readTxtWithEncodingFallback(file);
             return text
                 .split(/\r?\n\s*\r?\n+/)
                 .map(seg => seg.replace(/\s+/g, ' ').trim())
@@ -882,216 +1134,38 @@
             return extractParagraphsFromTxt(file);
         }
 
-        // ---------- 문단 단위 정렬(Myers) diff ----------
-        // 문단을 원자 단위로 취급해 최장 공통 부분열(LCS)을 찾는다.
-        //
-        // 예전에는 교과서적인 O(ND) Myers diff를 직접 구현해 각 반복마다 v 배열
-        // 전체를 trace에 스냅샷으로 저장했는데, 이 방식은 되짚기(backtrack)엔 편하지만
-        // 메모리가 O(D^2)로 늘어난다. 두 epub이 판형이 많이 달라 D(편집 거리)가
-        // 문단 수에 근접하면(리플로우가 심한 개정판 비교 등) 스냅샷이 수천 개 쌓이며
-        // "Array buffer allocation failed"로 죽는다(10MB 넘는 대용량 epub 두 개를
-        // 비교할 때 실제로 발생 보고됨). 그래서 이미 로드된 diff_match_patch의 라인
-        // 모드 인코딩(diff_linesToChars_)을 재사용한다 - 문단 하나를 한 글자로 치환해
-        // diff_main에 넘기면, diff_match_patch가 내부적으로 선형 공간(bisect) 알고리즘을
-        // 쓰기 때문에 같은 LCS 정렬을 메모리 폭발 없이 구할 수 있다.
-        //
-        // 정렬(LCS) 판단은 워터마크 문자를 제거한 텍스트끼리 비교하고, 실제 화면에는
-        // 각자의 원본(워터마크 포함) 텍스트를 그대로 돌려준다. 그래야 같은 책의 서로 다른
-        // 배포본(워터마크만 다른 사본)을 비교할 때 문단이 통째로 "없음" 처리되지 않는다.
-        function alignParagraphs(a, b) {
-            const dmp = new diff_match_patch();
-            // 끝에도 '\n'을 붙여야 마지막 문단이 다른 쪽에선 끝이 아닐 때도
-            // 같은 줄 문자열로 해시되어 매칭된다(안 붙이면 마지막 문단만
-            // trailing \n이 없어 동일 문단인데도 다른 문자로 인코딩됨).
-            const linesA = a.map(stripWatermarkChars).join('\n') + '\n';
-            const linesB = b.map(stripWatermarkChars).join('\n') + '\n';
-            const { chars1, chars2 } = dmp.diff_linesToChars_(linesA, linesB);
-            const diffs = dmp.diff_main(chars1, chars2, false);
-
-            const ops = [];
-            let idxA = 0, idxB = 0;
-            for (const [op, chars] of diffs) {
-                if (op === 0) {
-                    for (let i = 0; i < chars.length; i++) {
-                        ops.push({ op: 0, textA: a[idxA], textB: b[idxB] });
-                        idxA++; idxB++;
-                    }
-                } else if (op === -1) {
-                    for (let i = 0; i < chars.length; i++) {
-                        ops.push({ op: -1, textA: a[idxA] });
-                        idxA++;
-                    }
-                } else {
-                    for (let i = 0; i < chars.length; i++) {
-                        ops.push({ op: 1, textB: b[idxB] });
-                        idxB++;
-                    }
-                }
-            }
-            return ops;
+        // ---------- 문단 정렬 + diff 연산 (백그라운드 워커에 위임) ----------
+        // 큰 epub 두 권을 비교할 때 diff_match_patch 연산(문단 정렬 1회 + 변경된
+        // 블록마다 문자 단위 diff)이 메인 스레드를 오래 점유하면 브라우저 탭이
+        // 멈춘 것처럼 보인다. 이 연산 자체는 DOM에 의존하지 않는 순수 계산이므로
+        // 워커로 통째로 옮겨서 UI가 항상 반응하도록 한다.
+        function runDiffInWorker(paragraphsA, paragraphsB) {
+            return new Promise((resolve, reject) => {
+                const worker = new Worker(URL.createObjectURL(new Blob(
+                    [document.getElementById('diffWorkerCode').textContent],
+                    { type: 'application/javascript' }
+                )));
+                worker.onmessage = e => {
+                    worker.terminate();
+                    if (e.data && e.data.error) reject(new Error(e.data.error));
+                    else resolve(e.data);
+                };
+                worker.onerror = err => {
+                    worker.terminate();
+                    reject(err);
+                };
+                worker.postMessage({ paragraphsA, paragraphsB });
+            });
         }
 
-        // 워터마크/공백 차이만 제외하고 이어붙인 본문이 완전히 같은지 비교하기 위한 정규화.
-        function joinNormalized(lines) {
-            return lines.map(stripWatermarkChars).join(' ').replace(/\s+/g, ' ').trim();
-        }
-
-        // 삭제/추가가 뒤섞인 구간(hunk)은 문단 개수가 달라질 수 있다(병합/분리/문장 이동).
-        // 문단을 1:1로 억지로 짝지으면 실제로는 같은 내용인데 위치만 바뀐 부분이 "없음"으로
-        // 잘못 표시된다. 그래서 문단 경계로 나누지 않고 hunk 전체를 한 덩어리의 텍스트로
-        // 이어붙여 문자 단위로 비교한다 - 문단이 어떻게 재배치됐든 diff_match_patch가
-        // 공통 부분을 알아서 정렬해 실제로 달라진 글자만 잡아낸다.
-        function buildParagraphDiff(paragraphsA, paragraphsB) {
-            const ops = alignParagraphs(paragraphsA, paragraphsB);
-            const rows = [];
-            let i = 0;
-
-            while (i < ops.length) {
-                if (ops[i].op === 0) {
-                    rows.push({ type: 'match', left: ops[i].textA, right: ops[i].textB });
-                    i++;
-                    continue;
-                }
-
-                const delLines = [], insLines = [];
-                while (i < ops.length && ops[i].op !== 0) {
-                    if (ops[i].op === -1) delLines.push(ops[i].textA);
-                    else insLines.push(ops[i].textB);
-                    i++;
-                }
-
-                if (delLines.length === 0) {
-                    for (const line of insLines) rows.push({ type: 'added', left: null, right: line });
-                } else if (insLines.length === 0) {
-                    for (const line of delLines) rows.push({ type: 'removed', left: line, right: null });
-                } else {
-                    const isReflow = joinNormalized(delLines) === joinNormalized(insLines);
-                    rows.push({ type: 'block', leftLines: delLines, rightLines: insLines, isReflow });
-                }
-            }
-            return rows;
-        }
-
-        function renderChangedPair(leftText, rightText) {
-            const dmp = new diff_match_patch();
-            const diffs = dmp.diff_main(leftText, rightText);
-            dmp.diff_cleanupSemantic(diffs);
-
-            let left = '', right = '';
-            for (const [op, text] of diffs) {
-                const esc = renderTextWithWatermarks(text);
-                if (op === 0) { left += esc; right += esc; }
-                else if (op === -1) { left += `<span class="removed">${esc}</span>`; }
-                else if (op === 1) { right += `<span class="added">${esc}</span>`; }
-            }
-            return { left, right };
-        }
-
-        function containsWatermark(text) {
-            if (!text) return false;
-            for (const ch of text) {
-                if (WATERMARK_CHARS[ch.codePointAt(0)]) return true;
-            }
-            return false;
-        }
-
-        function buildRowHtml(row, idx) {
-            if (row.type === 'block' && row.isReflow) {
-                const leftHtml = row.leftLines.map(renderTextWithWatermarks).join('<br><br>');
-                const rightHtml = row.rightLines.map(renderTextWithWatermarks).join('<br><br>');
-                const leftCellClass = row.leftLines.some(containsWatermark) ? ' cell-watermark' : '';
-                const rightCellClass = row.rightLines.some(containsWatermark) ? ' cell-watermark' : '';
-
-                return `<div class="reflow-marker">◆ 문단 병합/분리됨 (내용 동일)</div>
-            <div class="compare-row row-reflow" id="row-${idx}">
-                <div class="compare-cell${leftCellClass}">${leftHtml}</div>
-                <div class="compare-cell${rightCellClass}">${rightHtml}</div>
-            </div>`;
-            }
-
-            let leftHtml, rightHtml, rowClass, leftRaw, rightRaw;
-
-            if (row.type === 'match') {
-                leftHtml = renderTextWithWatermarks(row.left);
-                rightHtml = renderTextWithWatermarks(row.right);
-                rowClass = 'row-match';
-                leftRaw = row.left;
-                rightRaw = row.right;
-            } else if (row.type === 'block') {
-                leftRaw = row.leftLines.join('\n\n');
-                rightRaw = row.rightLines.join('\n\n');
-                const rendered = renderChangedPair(leftRaw, rightRaw);
-                leftHtml = rendered.left;
-                rightHtml = rendered.right;
-                rowClass = 'row-changed';
-            } else if (row.type === 'removed') {
-                leftHtml = `<span class="text-unique-left">${renderTextWithWatermarks(row.left)}</span>`;
-                rightHtml = `<span class="placeholder-empty">(파일 B에 없음)</span>`;
-                rowClass = 'row-removed';
-                leftRaw = row.left;
-            } else {
-                leftHtml = `<span class="placeholder-empty">(파일 A에 없음)</span>`;
-                rightHtml = `<span class="text-unique-right">${renderTextWithWatermarks(row.right)}</span>`;
-                rowClass = 'row-added';
-                rightRaw = row.right;
-            }
-
-            const leftCellClass = containsWatermark(leftRaw) ? ' cell-watermark' : '';
-            const rightCellClass = containsWatermark(rightRaw) ? ' cell-watermark' : '';
-
-            return `<div class="compare-row ${rowClass}" id="row-${idx}">
-                <div class="compare-cell${leftCellClass}">${leftHtml}</div>
-                <div class="compare-cell${rightCellClass}">${rightHtml}</div>
-            </div>`;
-        }
-
-        const SUMMARY_CONTEXT_LINES = 3;
-
-        function computeVisibility(length, mismatchIdx, context) {
-            const visible = new Array(length).fill(false);
-            for (const idx of mismatchIdx) {
-                for (let j = Math.max(0, idx - context); j <= Math.min(length - 1, idx + context); j++) {
-                    visible[j] = true;
-                }
-            }
-            return visible;
-        }
-
-        function buildContextHtml(rows, mismatchIdx, context) {
-            const visible = computeVisibility(rows.length, mismatchIdx, context);
-            let html = '';
-            let i = 0;
-            while (i < rows.length) {
-                if (visible[i]) {
-                    html += buildRowHtml(rows[i], i);
-                    i++;
-                    continue;
-                }
-                let j = i;
-                while (j < rows.length && !visible[j]) j++;
-                html += `<div class="collapsed-divider">── 동일한 문단 ${j - i}개 생략 ──</div>`;
-                i = j;
-            }
-            return html;
-        }
-
-        function renderRows(rows) {
-            allRows = rows;
-            mismatchIndices = [];
+        function applyDiffResult(result) {
+            mismatchIndices = result.mismatchIndices;
             currentMismatchPointer = -1;
             lastCurrentRowIdx = null;
 
-            rows.forEach((row, idx) => {
-                if (row.type === 'match') return;
-                if (row.type === 'block' && row.isReflow) return;
-                mismatchIndices.push(idx);
-            });
-
-            const emptyHtml = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">두 파일의 문단 내용이 동일합니다</div></div>`;
-
-            viewHtmlCache.full = rows.map((row, idx) => buildRowHtml(row, idx)).join('') || emptyHtml;
-            viewHtmlCache.summary = buildContextHtml(rows, mismatchIndices, SUMMARY_CONTEXT_LINES) || emptyHtml;
-            viewHtmlCache.onlyDiff = buildContextHtml(rows, mismatchIndices, 0) || emptyHtml;
+            viewHtmlCache.full = result.viewHtmlCache.full;
+            viewHtmlCache.summary = result.viewHtmlCache.summary;
+            viewHtmlCache.onlyDiff = result.viewHtmlCache.onlyDiff;
 
             applyViewMode('full');
         }
@@ -1147,40 +1221,6 @@
             goToMismatch(mismatchIndices[currentMismatchPointer]);
         }
 
-        // 눈에 보이지 않는 워터마크(ID 은닉용) 문자를 어떤 문단 상태(동일/변경/단독)에서든
-        // 항상 눈에 띄는 표식으로 바꿔서 보여준다. 두 문자가 이진 인코딩(0/1)처럼 섞여
-        // 쓰이는 경우가 많아, 뭉뚱그린 기호 하나가 아니라 종류를 구분할 수 있는
-        // [WJ]/[IS] 태그로 실제 코드 순서를 그대로 읽을 수 있게 표시한다.
-        const WATERMARK_CHARS = {
-            0x2060: { tag: 'WJ', title: 'U+2060 Word Joiner (워터마크 의심 문자)' },
-            0x2063: { tag: 'IS', title: 'U+2063 Invisible Separator (워터마크 의심 문자)' }
-        };
-
-        function renderTextWithWatermarks(text) {
-            let result = '';
-            for (const ch of text) {
-                if (ch === '&') { result += '&amp;'; continue; }
-                if (ch === '<') { result += '&lt;'; continue; }
-                if (ch === '>') { result += '&gt;'; continue; }
-
-                const info = WATERMARK_CHARS[ch.codePointAt(0)];
-                if (info) {
-                    result += `<span class="watermark-char" title="${info.title}">[${info.tag}]</span>`;
-                } else {
-                    result += ch;
-                }
-            }
-            return result;
-        }
-
-        function stripWatermarkChars(text) {
-            let out = '';
-            for (const ch of text) {
-                if (!WATERMARK_CHARS[ch.codePointAt(0)]) out += ch;
-            }
-            return out;
-        }
-
         async function compareFiles() {
             if (!file1 || !file2) return;
             document.getElementById('loading').style.display = 'flex';
@@ -1193,8 +1233,8 @@
                     throw new Error('본문 문단을 찾지 못했습니다.');
                 }
 
-                const rows = buildParagraphDiff(paragraphsA, paragraphsB);
-                renderRows(rows);
+                const result = await runDiffInWorker(paragraphsA, paragraphsB);
+                applyDiffResult(result);
             } catch (error) {
                 alert('오류: ' + error.message);
             } finally {
@@ -1228,8 +1268,8 @@
 
             try {
                 const [opfA, opfB] = await Promise.all([getOpfInfo(file1), getOpfInfo(file2)]);
-                const rows = buildParagraphDiff(opfA.lines, opfB.lines);
-                renderRows(rows);
+                const result = await runDiffInWorker(opfA.lines, opfB.lines);
+                applyDiffResult(result);
             } catch (error) {
                 alert('오류: ' + error.message);
             } finally {
