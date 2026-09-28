@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor v1.4.0</title>
+<title>EPUB Editor v1.4.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
@@ -95,6 +95,7 @@
   .topbar button.primary { font-size: 18px; }
   .topbar button.open-btn { font-size: 18px; }
   .topbar button.reset-btn { font-size: 18px; }
+  .topbar button.clean-btn { font-size: 18px; }
   .topbar button:disabled { opacity: .22; cursor: default; pointer-events: none; transform: none; }
 
   /* 모바일 topbar 버튼 — .tb-btn (기본 숨김, 모바일에서만 표시) */
@@ -786,6 +787,7 @@
   <button class="preview-btn pc-only" id="btnPreviewPc" disabled title="미리보기 켜기/끄기" onclick="togglePreview()">👀</button>
   <button class="open-btn pc-only" id="btnOpenPc" title="파일 열기">📂</button>
   <button id="btnSavePc" class="primary pc-only" disabled title="저장">💾</button>
+  <button id="btnCleanPc" class="clean-btn pc-only" disabled title="공백코드 제거">🦠</button>
   <button id="btnResetPc" class="reset-btn pc-only" disabled title="초기화">🔄</button>
   <!-- 모바일 버튼 -->
   <div class="mb-only" style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
@@ -794,6 +796,7 @@
     <button id="btnUndoMb" disabled title="되감기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
     <button id="btnRedoMb" disabled title="다시실행" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
     <button id="btnSaveMb" class="tb-btn primary" disabled title="저장" style="background:none;border:none;font-size:16px;padding:0 2px;">💾</button>
+    <button id="btnCleanMb" class="tb-btn clean-btn" disabled title="공백코드 제거" style="background:none;border:none;font-size:16px;padding:0 2px;">🦠</button>
   </div>
   <input type="file" id="fileInput" accept=".epub,.txt" style="display:none"/>
 </div>
@@ -956,6 +959,8 @@
   const btnResetPc = document.getElementById('btnResetPc');
   const btnOpenMb  = document.getElementById('btnOpenMb');
   const btnSaveMb  = document.getElementById('btnSaveMb');
+  const btnCleanPc = document.getElementById('btnCleanPc');
+  const btnCleanMb = document.getElementById('btnCleanMb');
   const btnSearch  = document.getElementById('btnSearch');
   const btnToc     = document.getElementById('btnToc');
   const btnUndo    = document.getElementById('btnUndo');
@@ -1088,8 +1093,10 @@
   function allOpenButtons()  { return [btnOpenPc, btnOpenMb]; }
 
   function setSaveDisabled(v) { allSaveButtons().forEach(b => b && (b.disabled = v)); }
+  function setCleanDisabled(v) { [btnCleanPc, btnCleanMb].forEach(b => b && (b.disabled = v)); }
   function setControlsDisabled(v) {
     if(btnResetPc) btnResetPc.disabled = v;
+    setCleanDisabled(v);
     btnSearch.disabled = v;
     btnToc.disabled = v;
   }
@@ -1204,6 +1211,7 @@
     topFname.textContent = `${currentFileName} · ${formatBytes(file.size)} · TXT`;
     setSaveDisabled(false);
     if(btnResetPc) btnResetPc.disabled = false;  // TXT에서도 Reset 활성화
+    setCleanDisabled(false);                     // TXT에서도 공백코드 제거 가능
     // 검색 버튼만 활성화 (TOC 버튼은 TXT에서 불필요)
     btnSearch.disabled = false;
 
@@ -2292,6 +2300,83 @@
 
   btnSavePc.addEventListener('click', doSave);
   btnSaveMb.addEventListener('click', doSave);
+
+  // ─── 🦠 공백코드(U+2060/U+2063) + book-token 일괄 제거 ───
+  // 워터마크_분석_제거.html과 같은 규칙: 바이너리가 아닌 모든 파일에서 U+2060/U+2063 삭제,
+  // .opf에서는 <meta name="book-token" ...> 태그를 줄째로 삭제
+  const WM_CHARS_REGEX = /[⁠⁣]/g;
+  const WM_BINARY_EXTS = new Set([
+    'jpg','jpeg','png','gif','webp','bmp','tiff','tif','svg',
+    'ttf','otf','woff','woff2','eot',
+    'mp3','mp4','wav','ogg','aac','flac',
+    'avi','mov','mkv','webm',
+    'zip','pdf','swf',
+  ]);
+  const WM_BOOK_TOKEN_PATTERNS = [
+    String.raw`<meta\s[^>]*name=["']book-token["'][^>]*>.*?</meta>`,
+    String.raw`<meta\s[^>]*content=["'][^"']*["']\s+name=["']book-token["'][^>]*>.*?</meta>`,
+    String.raw`<meta\s[^>]*name=["']book-token["'][^>]*/?>`,
+    String.raw`<meta\s[^>]*content=["'][^"']*["']\s+name=["']book-token["'][^>]*/?>`,
+  ].map(p => new RegExp(String.raw`[ \t]*` + p + String.raw`[ \t]*\r?\n?`, 'gis'));
+
+  function wmStripBytes(u8) {
+    const out = new Uint8Array(u8.length);
+    let o = 0, n = 0;
+    for(let i = 0; i < u8.length; i++) {
+      if(u8[i] === 0xE2 && i + 2 < u8.length && u8[i+1] === 0x81 && (u8[i+2] === 0xA0 || u8[i+2] === 0xA3)) { n++; i += 2; continue; }
+      out[o++] = u8[i];
+    }
+    return { data: n ? out.slice(0, o) : u8, count: n };
+  }
+
+  function removeWatermarks() {
+    if(!Object.keys(files).length) return;
+    const changed = {};
+    let zwCount = 0, tokenCount = 0;
+
+    for(const path in files) {
+      if(path === 'mimetype') continue;
+      const d = files[path];
+      if(typeof d === 'string') {
+        const n = (d.match(WM_CHARS_REGEX) || []).length;
+        let text = n ? d.replace(WM_CHARS_REGEX, '') : d;
+        let tokenRemoved = false;
+        if(path.endsWith('.opf')) {
+          let t = text;
+          for(const re of WM_BOOK_TOKEN_PATTERNS) t = t.replace(re, '');
+          if(t !== text) { text = t; tokenRemoved = true; tokenCount++; }
+        }
+        if(n || tokenRemoved) { changed[path] = text; zwCount += n; }
+      } else if(d instanceof Uint8Array && !WM_BINARY_EXTS.has(getExt(path).toLowerCase())) {
+        const r = wmStripBytes(d);
+        if(r.count) { changed[path] = r.data; zwCount += r.count; }
+      }
+    }
+
+    const paths = Object.keys(changed);
+    if(!paths.length) { alert('🦠 제거할 공백코드나 book-token이 없습니다.'); return; }
+
+    pushFileHistory('🦠 공백코드 제거', paths);
+    paths.forEach(p => { files[p] = changed[p]; modifiedFiles.add(p); });
+
+    if(isTxtMode) {
+      txtContent = files['__txt__/' + currentFileName] ?? txtContent;
+      const cleanTitle = currentFileName.replace(/\.txt$/i, '').replace(/[_\-]/g,' ').trim();
+      txtChapters = parseTxtChapters(txtContent, cleanTitle);
+      renderTxtTree();
+    } else {
+      renderFileTree();
+    }
+    renderTabs();
+    if(activeTab) renderEditor();   // 열려 있는 에디터 내용도 새로 반영
+    updateStatus();
+    updateUndoRedo();
+
+    alert(`🦠 제거 완료\n\n공백코드(U+2060/U+2063): ${zwCount.toLocaleString()}개\nbook-token: ${tokenCount}개\n수정된 파일: ${paths.length}개\n\n💾 저장을 눌러야 EPUB 파일에 반영됩니다.`);
+  }
+
+  btnCleanPc.addEventListener('click', removeWatermarks);
+  btnCleanMb.addEventListener('click', removeWatermarks);
 
   // ─── SEARCH ───
   function openSearchModal() {
