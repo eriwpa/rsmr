@@ -284,7 +284,8 @@
     font-size: 13px; line-height: 1.7;
     padding: 16px 20px;
     resize: none; border: none; outline: none;
-    overflow: auto; tab-size: 2;
+    /* 오버레이와 줄바꿈 폭이 같도록 세로 스크롤바 자리를 항상 확보 */
+    overflow-x: hidden; overflow-y: scroll; tab-size: 2;
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     z-index: 2;
     white-space: pre-wrap;
@@ -348,15 +349,20 @@
     font-family: var(--font-code);
     font-size: 13px; line-height: 1.7;
     pointer-events: none; z-index: 1;
-    overflow: hidden; white-space: pre-wrap; word-break: break-word; tab-size: 2;
+    /* 에디터(textarea)와 같은 폭에서 줄바꿈되도록 스크롤바 자리도 똑같이 둔다 (위의 textarea 가 가림) */
+    overflow-x: hidden; overflow-y: scroll; white-space: pre-wrap; word-break: break-word; tab-size: 2;
     color: var(--text);
     background: var(--bg);
   }
-  .invis-badge {
-    display: inline; background: #ff4757; color: #fff;
+  /* 제로폭 문자는 실제 문자를 그대로 두고(폭 0) 라벨만 겹쳐 그림 → 글자 위치가 에디터와 같음 */
+  .invis-badge { position: relative; }
+  .invis-badge::after {
+    content: attr(data-l);
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    background: #ff4757; color: #fff;
     font-size: 9px; font-family: var(--font-ui); font-weight: 700;
-    border-radius: 3px; padding: 1px 3px; vertical-align: middle;
-    pointer-events: none; line-height: 1; letter-spacing: 0;
+    border-radius: 3px; padding: 1px 3px;
+    pointer-events: none; line-height: 1; letter-spacing: 0; white-space: nowrap;
   }
   .token-highlight {
     background: #ffea66; color: var(--text);
@@ -791,7 +797,7 @@
   <button id="btnResetPc" class="reset-btn pc-only" disabled title="초기화">🔄</button>
   <!-- 모바일 버튼 -->
   <div class="mb-only" style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
-    <button class="tb-btn preview-btn" id="btnPreviewMb" disabled title="미리보기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.75;line-height:1;" onclick="togglePreview()">👀</button>
+    <button class="tb-btn preview-btn" id="btnPreviewMb" disabled title="미리보기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.75;line-height:1;" onclick="togglePreview()">👁️</button>
     <button class="tb-btn open-btn" id="btnOpenMb" style="background:none;border:none;font-size:16px;padding:0 2px;">📂</button>
     <button id="btnUndoMb" disabled title="되감기" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏪</button>
     <button id="btnRedoMb" disabled title="다시실행" style="background:none;border:none;font-size:16px;padding:0 2px;cursor:pointer;opacity:0.8;line-height:1;">⏩</button>
@@ -1992,13 +1998,14 @@
       if(INVIS_CHARS[ch]) {
         const label = INVIS_CHARS[ch];
         const code = ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0');
-        result += `<span class="invis-badge" title="U+${code} ${label}">${label}</span>`;
+        result += `<span class="invis-badge" data-l="${label}" title="U+${code} ${label}">${ch}</span>`;
       } else if(ch === '&') result += '&amp;';
       else if(ch === '<') result += '&lt;';
       else if(ch === '>') result += '&gt;';
       else result += ch;
     }
-    return result;
+    // textarea 는 끝의 빈 줄까지 높이에 넣으므로, 오버레이가 더 짧아 스크롤이 덜 내려가지 않게 한 줄 여유
+    return result + '\n ';
   }
 
   function updateOverlay() {
@@ -2049,7 +2056,7 @@
       <div class="editor-container">
         <div class="editor-inner">
           <div class="line-numbers" id="lineNumbers"></div>
-          <textarea class="code-editor" id="codeEditor" wrap="soft">${escHtml(content)}</textarea>
+          <textarea class="code-editor" id="codeEditor" wrap="soft" spellcheck="false">${escHtml(content)}</textarea>
           <div class="invis-overlay" id="invisOverlay" aria-hidden="true"></div>
         </div>
       </div>`;
