@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>EPUB Editor v1.4.1</title>
+<title>EPUB Editor v1.4.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap');
@@ -158,13 +158,13 @@
 
   /* ─── PC SIDEBAR ─── */
   .sidebar {
-    width: 380px; min-width: 380px;
+    width: 310px; min-width: 310px;
     background: var(--bg2); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; overflow: hidden;
   }
   .sidebar-header {
-    padding: 10px 14px; font-size: 10px; font-weight: 600; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 1.2px; border-bottom: 1px solid var(--border);
+    padding: 10px 10px 10px 12px; font-size: 10px; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
     flex-shrink: 0;
   }
@@ -185,7 +185,7 @@
 
   .file-tree { flex: 1; overflow-y: auto; padding: 6px 0; -webkit-overflow-scrolling: touch; }
   .file-group-label {
-    padding: 8px 14px 4px; font-size: 9px; font-weight: 600; color: var(--text-dim);
+    padding: 8px 12px 4px; font-size: 10px; font-weight: 600; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
   }
   .file-group-label:hover { color: var(--text); }
@@ -193,15 +193,15 @@
   .file-group.collapsed .file-group-items { display: none; }
 
   .file-item {
-    display: flex; align-items: center; gap: 8px; padding: 5px 14px;
-    font-size: 11px; color: var(--text); cursor: pointer; transition: background .12s;
+    display: flex; align-items: center; gap: 8px; padding: 5px 12px;
+    font-size: 12.5px; color: var(--text); cursor: pointer; transition: background .12s;
     white-space: nowrap; overflow: hidden;
   }
   .file-item:hover { background: var(--bg-hover); }
   .file-item.active { background: var(--accent-dim); color: var(--accent); }
-  .file-item .icon { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; }
+  .file-item .icon { font-size: 14px; width: 16px; text-align: center; flex-shrink: 0; }
   .file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .file-item .timestamp { font-size: 9px; color: var(--text-dim); font-family: var(--font-code); flex-shrink: 0; }
+  .file-item .timestamp { font-size: 10px; color: var(--text-dim); font-family: var(--font-code); flex-shrink: 0; }
   .file-item.active .timestamp { color: var(--accent); }
   .file-item.modified { color: var(--red); }
   .file-item .spine-num {
@@ -1953,9 +1953,58 @@
     const html = buildPreviewHtml(previewTargetPath);
     const frame = document.getElementById('previewFrame');
     if(!frame || html === null) { showPreviewPlaceholder('미리보기를 생성할 수 없습니다'); return; }
+    // 편집 중 새로 그려도 보던 위치 유지
+    let keepY = 0;
+    try { keepY = previewShownPath === previewTargetPath ? (frame.contentWindow.scrollY || 0) : 0; } catch(e) {}
+    previewShownPath = previewTargetPath;
+    frame.onload = () => { try { if(keepY) frame.contentWindow.scrollTo(0, keepY); } catch(e) {} };
     frame.srcdoc = html;
     const title = document.getElementById('previewTitle');
     if(title) title.textContent = `Preview · ${previewTargetPath.split('/').pop()}`;
+  }
+
+  // ─── 에디터 커서 위치 → 미리보기 같은 곳으로 스크롤 ───
+  // 커서 앞의 마지막 여는 태그가 그 태그 이름으로 몇 번째인지 세서, 미리보기 문서의 같은 순번 요소로 이동
+  let previewShownPath = null;
+  let previewSyncTimer = null;
+  function syncPreviewToCaret() {
+    if(!previewVisible || !activeTab || activeTab !== previewTargetPath) return;
+    const editor = document.getElementById('codeEditor');
+    const frame  = document.getElementById('previewFrame');
+    if(!editor || !frame) return;
+    let doc;
+    try { doc = frame.contentDocument; } catch(e) { return; }
+    if(!doc || !doc.body) return;
+    // 주석/CDATA 는 같은 길이의 공백으로 지워 태그 개수를 틀리지 않게
+    const src = editor.value.slice(0, editor.selectionStart)
+      .replace(/<!--[\s\S]*?(?:-->|$)|<!\[CDATA\[[\s\S]*?(?:\]\]>|$)/g, m => ' '.repeat(m.length));
+    const bodyIdx = src.search(/<body[\s>]/i);
+    if(bodyIdx < 0) return;
+    const tagRe = /<([a-zA-Z][\w:-]*)(?=[\s>\/])/g;
+    let last = null, m;
+    const counts = {};
+    while((m = tagRe.exec(src)) !== null) {
+      const name = m[1].toLowerCase();
+      counts[name] = (counts[name] || 0) + 1;
+      if(m.index >= bodyIdx) last = name;
+    }
+    if(!last || last === 'link' || last === 'style' || last === 'body') {
+      if(last === 'body') doc.defaultView.scrollTo(0, 0);
+      return;
+    }
+    const el = doc.getElementsByTagName(last)[counts[last] - 1];
+    if(!el) return;
+    el.scrollIntoView({ block: 'center' });
+    // 잠깐 표시
+    el.style.transition = 'background-color .6s';
+    const prevBg = el.style.backgroundColor;
+    el.style.backgroundColor = 'rgba(255, 234, 102, 0.6)';
+    clearTimeout(el._syncHl);
+    el._syncHl = setTimeout(() => { el.style.backgroundColor = prevBg; }, 700);
+  }
+  function scheduleSyncPreview() {
+    clearTimeout(previewSyncTimer);
+    previewSyncTimer = setTimeout(syncPreviewToCaret, 60);
   }
 
   function schedulePreviewRefresh() {
@@ -2084,6 +2133,10 @@
       if(!modifiedFiles.has(activeTab)) { modifiedFiles.add(activeTab); renderTabs(); renderFileTree(); updateStatus(); }
       updateOverlay();
       schedulePreviewRefresh();
+    });
+    editor.addEventListener('mouseup', scheduleSyncPreview);
+    editor.addEventListener('keyup', e => {
+      if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(e.key) || ((e.ctrlKey || e.metaKey) && ['Home','End'].includes(e.key))) scheduleSyncPreview();
     });
     editor.addEventListener('keydown', e => {
       if(e.key === 'Tab') {
