@@ -294,10 +294,13 @@ function parseFilename(filename) {
 // ============================================================================
 const NUM = "[\\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]";
 const n = NUM;
+// <1화> / <1화> 소제목 - 꺾쇠로 감싼 화 (〈〉《》 포함)
+const HWA_BRACKET = String.raw`[<〈《]\s*${n}+\s*화\s*[>〉》](?:\s.*)?`;
 const CHAPTER_TAIL = [
   // 화(話)
   String.raw`제?\s*${n}+\s*화(?:\s*\(?\s*(?:완결|완|Complete)\s*\)?)?(?:[\.\s].*)?|`,
   String.raw`[^\w\s]{1,3}\s*${n}+\s*화(?:\s*\(?\s*(?:완결|완|Complete)\s*\)?)?(?:[\.\s].*)?|`,
+  `${HWA_BRACKET}|`,
   // 장(章)
   String.raw`(?:제|第)?\s*${n}+\s*(?:장|章)(?:[\.\s].*)?|`,
   String.raw`^(?:第?\s*[一二三四五六七八九十百千]{1,3}\s*[章回]|[一二三四五六七八九十百千]{1,3}\s*[章回])(?:\s*[\(（]?.{1,50}[\)）]?)?|`,
@@ -324,12 +327,13 @@ const CHAPTER_TAIL = [
 
 const RE_SPACES = /[\u2000-\u200B\u3000\uFEFF]/g;
 const RE_MANY_NL = /\n{4,}/g;
-const RE_HAS_HWA = pyRe(String.raw`^제?\s*\d+\s*화(?:\s*\(?\s*(?:완결|완|마침|完|fin|Complete)\s*\)?)?(?:[\.\s].*)?$`);
+const RE_HAS_HWA = pyRe(String.raw`^(?:제?\s*\d+\s*화(?:\s*\(?\s*(?:완결|완|마침|完|fin|Complete)\s*\)?)?(?:[\.\s].*)?|[<〈《]\s*\d+\s*화\s*[>〉》](?:\s.*)?)$`);
 const RE_ENDING_NEG = pyRe(String.raw`^.*(?:화|권|장|chapter|part)\b.*(?:완결|完)`, true);
 const RE_ENDING_POS = pyRe(String.raw`^-?\s*.{0,15}(?:完|마침|[Ff]in\.?|완결)\s*-?$`, true);
 const RE_H2 = pyRe([
   String.raw`^(`,
   String.raw`[^\d]*${n}+\s*화(?:\s*\(?\s*(?:완결|완|Complete)\s*\)?)?(?:[\.\s].*)?|`,
+  `${HWA_BRACKET}|`,
   String.raw`.*외전(?:[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ\s]*(?:화|권)?)?(?:[\.\s].*)?|`,
   String.raw`[^\w\s]*(?:프롤로그|[Pp]rologue|에필로그|[Ee]pilogue|[Ee]pisode|후일담|번외|서장|종장).*`,
   String.raw`)\s*$`,
@@ -624,7 +628,7 @@ function processLine(line) {
   return `<p>${escapeXml(line)}</p>`;
 }
 
-const RE_BODY_CHAPTER = pyRe(String.raw`^(?:제?\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\s*화(?:\s*\(?\s*(?:완결|완|Complete)\s*\)?)?(?:[.\s].*)?|[^\w\s]{1,3}\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\s*화(?:\s*\(?\s*(?:완결|완|Complete)\s*\)?)?(?:[.\s].*)?|(?:제|第)?\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\s*(?:장|章)(?:[.\s].*)?|.*외전(?:\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+(?:-[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?)?(?:\s*화)?(?:[.\s].*)?|[^\w\s]*(?:프롤로그|prologue)(?:\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:\s*화)?(?:[.\s].*)?|[^\w\s]*(?:에필로그|epilogue)(?:\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:\s*화)?(?:[.\s].*)?|(?:서장|종장|후일담|번외|작가\s*후기|chapter|episode)(?:\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:[.\s].*)?|[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+(?:-[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?\.(?:\s.*)?|【[^】]+】)\s*$`, true, true);
+const RE_BODY_CHAPTER = pyRe(String.raw`^(?:제?\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\s*화(?:\s*\(?\s*(?:완결|완|Complete)\s*\)?)?(?:[.\s].*)?|[^\w\s]{1,3}\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\s*화(?:\s*\(?\s*(?:완결|완|Complete)\s*\)?)?(?:[.\s].*)?|[<〈《]\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\s*화\s*[>〉》](?:\s.*)?|(?:제|第)?\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\s*(?:장|章)(?:[.\s].*)?|.*외전(?:\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+(?:-[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?)?(?:\s*화)?(?:[.\s].*)?|[^\w\s]*(?:프롤로그|prologue)(?:\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:\s*화)?(?:[.\s].*)?|[^\w\s]*(?:에필로그|epilogue)(?:\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:\s*화)?(?:[.\s].*)?|(?:서장|종장|후일담|번외|작가\s*후기|chapter|episode)(?:\s*[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?(?:[.\s].*)?|[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+(?:-[\dⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+)?\.(?:\s.*)?|【[^】]+】)\s*$`, true, true);
 
 /** Rust "s.trim_end_matches('.').parse::<u32>().is_ok()" */
 function isU32(s) {
@@ -740,7 +744,26 @@ const CRC_TABLE = (() => {
   return t;
 })();
 function crc32(d) { let c = 0xffffffff; for (let i = 0; i < d.length; i++) c = CRC_TABLE[(c ^ d[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+// 최대 압축(레벨 9)은 fflate 로. 못 불러오면 브라우저 내장 CompressionStream(기본 레벨)으로.
+const FFLATE_URL = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js";
+let fflateLoading = null;
+function loadFflate() {
+  if (window.fflate) return Promise.resolve(window.fflate);
+  if (!fflateLoading) {
+    fflateLoading = new Promise((res) => {
+      const s = document.createElement("script");
+      s.src = FFLATE_URL;
+      s.onload = () => res(window.fflate || null);
+      s.onerror = () => res(null);
+      setTimeout(() => res(window.fflate || null), 8000);
+      document.head.append(s);
+    });
+  }
+  return fflateLoading;
+}
 async function deflateRaw(data) {
+  const ff = await loadFflate();
+  if (ff && ff.deflateSync) return ff.deflateSync(data, { level: 9 });
   const s = new Blob([data]).stream().pipeThrough(new CompressionStream("deflate-raw"));
   return new Uint8Array(await new Response(s).arrayBuffer());
 }
@@ -875,6 +898,7 @@ function showHelp() {
 <p>&nbsp;</p>
 <p class="sm c-gray"><b>📚 목차 인식 패턴 목록:</b><br>
 - 1화 / 제1화 / 1. 제목 / 1화 제목 등 숫자 기반 제목<br>
+- &lt;1화&gt; / &lt;1화&gt; 소제목 처럼 꺾쇠로 감싼 화<br>
 - 프롤로그 / 에필로그 / 외전 / 후일담 (영문, 한문 포함)<br>
 - 서장 / 종장 / Prologue / Epilogue<br>
 - 제1장 / 第1章 등 장 단위 표현<br>
