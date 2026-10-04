@@ -205,6 +205,15 @@
             color: white;
         }
 
+        #resetBtn {
+            background: #dcf4fb;
+            border-color: #dcf4fb;
+        }
+
+        #resetBtn:hover {
+            filter: brightness(0.96);
+        }
+
         .view-mode-group {
             display: flex;
             gap: 0.3rem;
@@ -855,6 +864,7 @@
             </div>
 
             <div class="action-bar">
+                <button class="btn btn-toggle" id="resetBtn" onclick="resetAll()" title="선택한 파일과 비교 결과를 모두 지우고 처음 상태로 돌아갑니다">🪄 초기화</button>
                 <button class="btn btn-toggle active" id="tocToggleBtn" onclick="toggleToc()">☰ 목차</button>
                 <div class="view-mode-group">
                     <button class="btn btn-toggle active" id="viewFullBtn" onclick="applyViewMode('full')">전체 보기</button>
@@ -1805,7 +1815,9 @@ function buildChapterMarker(r, statsA, statsB) {
 
 self.onmessage = async function (e) {
     try {
-        const { fileA, fileB, mode } = e.data;
+        // 화면 쪽에서 읽어 둔 { name, buffer } 를 File 처럼 쓸 수 있게 감싼다
+        const asFile = f => ({ name: f.name, arrayBuffer: async () => f.buffer });
+        const fileA = asFile(e.data.fileA), fileB = asFile(e.data.fileB), mode = e.data.mode;
         charDiffSpent = 0;
         ignoreDividers = !!e.data.ignoreDividers && mode !== 'meta';
         progress('파일 A 읽는 중...');
@@ -1948,8 +1960,9 @@ self.onmessage = async function (e) {
 
         let workerUrl = null;
 
-        function getWorkerUrl() {
-            if (!workerUrl) {
+        function getWorkerUrl(fresh) {
+            if (!workerUrl || fresh) {
+                if (workerUrl) URL.revokeObjectURL(workerUrl);
                 const code = ['libJszip', 'libDmp', 'diffWorkerCode']
                     .map(id => document.getElementById(id).textContent)
                     .join('\n;\n');
@@ -1958,10 +1971,24 @@ self.onmessage = async function (e) {
             return workerUrl;
         }
 
-        function runWorker(fileA, fileB, mode) {
-            return new Promise((resolve, reject) => {
-                const worker = new Worker(getWorkerUrl());
+        // 사파리(아이폰/맥)는 blob 주소 등록이 비동기라서, 만들자마자 워커를 띄우면 가끔 워커 코드를
+        // 못 읽고 실패한다. 페이지를 열 때 미리 만들어 두고, 실패하면 runWorker 에서 다시 시도한다.
+        getWorkerUrl();
+
+        // 파일 내용은 여기(화면 쪽)에서 미리 읽어서 워커로 넘긴다. 사파리는 로컬로 연 페이지에서
+        // File 객체를 워커에 넘기면 워커 안에서 읽지 못한다("The I/O read operation failed").
+        async function readForWorker(file) {
+            return { name: file.name, buffer: await file.arrayBuffer() };
+        }
+
+        const WORKER_RETRY = 3;
+
+        function runWorkerOnce(fileA, fileB, mode, fresh) {
+            return Promise.all([readForWorker(fileA), readForWorker(fileB)]).then(([a, b]) => new Promise((resolve, reject) => {
+                const worker = new Worker(getWorkerUrl(fresh));
+                let started = false;
                 worker.onmessage = e => {
+                    started = true;
                     const data = e.data;
                     if (data && data.progress) {
                         document.getElementById('loadingText').textContent = data.progress;
@@ -1973,10 +2000,23 @@ self.onmessage = async function (e) {
                 };
                 worker.onerror = err => {
                     worker.terminate();
-                    reject(new Error(err.message || '워커 오류'));
+                    const error = new Error(err.message || '워커 오류');
+                    error.beforeStart = !started; // 워커 코드 로드 실패 → 다시 시도할 수 있음
+                    reject(error);
                 };
-                worker.postMessage({ fileA, fileB, mode, ignoreDividers: document.getElementById('ignoreDividers').checked });
-            });
+                worker.postMessage({ fileA: a, fileB: b, mode, ignoreDividers: document.getElementById('ignoreDividers').checked }, [a.buffer, b.buffer]);
+            }));
+        }
+
+        async function runWorker(fileA, fileB, mode) {
+            for (let attempt = 0; ; attempt++) {
+                try {
+                    return await runWorkerOnce(fileA, fileB, mode, attempt > 0);
+                } catch (error) {
+                    if (!error.beforeStart || attempt >= WORKER_RETRY) throw error;
+                    await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
+                }
+            }
         }
 
         async function runCompare(mode) {
@@ -2003,6 +2043,44 @@ self.onmessage = async function (e) {
         // 옵션을 바꾸면 이미 비교한 결과가 있을 때 바로 다시 비교 (열 때마다 기본은 체크 해제)
         function onIgnoreDividersChange() {
             if (result && lastCompareMode === 'text') compareFiles();
+        }
+
+        // ---------- 초기화 ----------
+        // 파일 선택, 비교 결과, 목차, 옵션을 모두 처음 상태로 되돌린다
+
+        const INITIAL_BODY_HTML = document.getElementById('compareBody').innerHTML;
+
+        function resetAll() {
+            file1 = file2 = null;
+            [1, 2].forEach(num => {
+                const name = document.getElementById(`fileName${num}`);
+                name.textContent = '선택된 파일 없음 (드래그 가능)';
+                name.removeAttribute('title');
+                const input = document.getElementById(`file${num}`);
+                if (input) input.value = '';
+            });
+            document.getElementById('compareBtn').disabled = true;
+            document.getElementById('metaCompareBtn').disabled = true;
+
+            result = null;
+            lastCompareMode = null;
+            mismatchIndices = [];
+            mismatchPointerOfRow = new Map();
+            currentMismatchPointer = -1;
+            lastCurrentRowIdx = null;
+            viewHtmlCache = {};
+            currentChap = { A: -1, B: -1 };
+
+            document.getElementById('ignoreDividers').checked = false;
+            document.getElementById('dividerNote').textContent = '';
+            document.getElementById('currentChapter').textContent = '';
+            document.getElementById('tocOnlyDiff').checked = false;
+
+            applyViewMode('full');
+            document.getElementById('compareBody').innerHTML = INITIAL_BODY_HTML;
+            document.getElementById('contentRow').scrollTop = 0;
+            renderToc();
+            closeTocPopup();
         }
 
         // ---------- 결과 표시 ----------
