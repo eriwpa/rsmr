@@ -5,5 +5,3 @@ https://eriwpa.github.io/rsmr/epub-compare-text.html
 https://eriwpa.github.io/rsmr/txt2epub3.html
 
 https://eriwpa.github.io/rsmr/EPUB_Hash_Compare.html
-
-https://eriwpa.github.io/rsmr/Watermark_Tool.html
