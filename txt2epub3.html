@@ -76,41 +76,47 @@ dialog h2 { font-size: 15px; margin: 0 0 12px; text-align: center; }
 #exList label.h3 { padding-left: 22px; color: var(--dgray); font-size: 12px; }
 .hint { text-align: center; color: var(--muted); font-size: 12px; margin: -6px 0 10px; }
 .busy { cursor: progress; }
+.mb-only { display: none; }
+#coverView { display: flex; align-items: center; justify-content: center; min-height: 160px; margin-bottom: 12px; color: var(--muted); font-size: 13px; text-align: center; }
+#coverView img { max-width: 100%; max-height: 70vh; max-height: 70dvh; display: block; border-radius: 6px; }
 @media (hover: none) and (pointer: coarse) { .pc-only { display: none; } }
 
 /* ---------- 모바일 ---------- */
 @media (max-width: 640px) {
   html, body { height: auto; }
   body { padding: 0; display: block; font-size: 14px; -webkit-text-size-adjust: 100%; }
-  .wrap { border: 0; border-radius: 0; padding: 12px 12px calc(84px + env(safe-area-inset-bottom)); min-height: 100vh; min-height: 100dvh; }
+  .wrap { border: 0; border-radius: 0; padding: 12px 12px calc(64px + env(safe-area-inset-bottom)); min-height: 100vh; min-height: 100dvh; }
   h1 { flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 12px; }
   h1 small { font-size: 11px; }
-  button { padding: 9px 10px; min-height: 42px; touch-action: manipulation; }
+  button { padding: 4px 8px; min-height: 32px; touch-action: manipulation; }
   .row label.k { width: 34px; }
-  .path { padding: 10px; min-height: 42px; line-height: 20px; font-size: 13px; }
-  .row button { padding: 9px 12px; }
+  .row { margin-bottom: 6px; }
+  .path { padding: 5px 8px; min-height: 32px; line-height: 20px; font-size: 13px; }
+  .row button { padding: 4px 12px; }
   /* 도구 버튼: 3칸 격자 */
-  .tools { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 2px 0 10px; }
-  .tools button { grid-column: span 2; padding: 8px 4px; font-size: 13px; white-space: normal; line-height: 1.25; }
+  .tools { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin: 2px 0 8px; }
+  .tools button { grid-column: span 2; padding: 4px 4px; font-size: 13px; white-space: normal; line-height: 1.25; }
   .tools button:nth-child(n+4) { grid-column: span 3; } /* 윗줄 3개 / 아랫줄 2개 꽉 차게 */
   .main { flex-direction: column; flex: none; min-height: 0; gap: 10px; }
-  .preview { flex: none; height: 52vh; height: 52dvh; min-height: 260px; padding: 10px; }
+  .preview { flex: none; height: 62vh; height: 62dvh; min-height: 260px; padding: 10px; }
   .preview .sm { font-size: 11.5px; }
-  /* 표지: 없으면 얇게, 있으면 크게 */
-  .cover { width: 100%; height: 48px; order: -1; }
-  .cover:has(img) { height: 280px; order: 0; }
+  /* 표지 칸은 숨기고, 아래 '표지 미리보기' 버튼으로 본다 */
+  .cover { display: none; }
+  .mb-only { display: block; }
   /* 변환 버튼: 화면 아래 고정 */
-  .go { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-        background: var(--panel); border-top: 1px solid var(--line); z-index: 5; }
-  .go button { width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; }
+  .go { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+        background: var(--panel); border-top: 1px solid var(--line); z-index: 5; gap: 8px; }
+  .go button { flex: 1; min-width: 0; padding: 6px 6px; min-height: 36px; font-size: 15px; border-radius: 8px; }
+  .go #coverViewBtn { background: var(--btn); border-color: var(--line); color: var(--text); font-weight: normal; }
+  .go #coverViewBtn:hover { background: var(--btn-h); }
   /* 다이얼로그: 아래에서 올라오는 시트 */
   dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 14px 14px 0 0; border-bottom: 0;
            padding: 16px 14px calc(14px + env(safe-area-inset-bottom)); max-height: 92vh; max-height: 92dvh; }
   .radios { gap: 4px 10px; }
-  .radios label { padding: 10px 4px; font-size: 14px; }
+  .radios label { padding: 6px 4px; font-size: 14px; }
   .radios input { width: 18px; height: 18px; vertical-align: -3px; }
   #exList { width: 100%; height: 56vh; height: 56dvh; font-size: 14px; padding: 4px 8px; }
-  #exList label { padding: 7px 0; }
+  #exList label { padding: 4px 0; }
   #exList label.h3 { font-size: 13px; }
   #exList input { width: 18px; height: 18px; vertical-align: -3px; }
 }
@@ -148,7 +154,7 @@ dialog h2 { font-size: 15px; margin: 0 0 12px; text-align: center; }
     <div class="cover" id="cover">표지 없음</div>
   </div>
 
-  <div class="go"><button id="convertBtn">👻 EPUB 변환</button></div>
+  <div class="go"><button id="coverViewBtn" class="mb-only">🖼️ 표지 미리보기</button><button id="convertBtn">👻 EPUB 변환</button></div>
 
 </div>
 
@@ -156,6 +162,12 @@ dialog h2 { font-size: 15px; margin: 0 0 12px; text-align: center; }
   <h2>🌐 플랫폼에서 표지 찾기</h2>
   <div class="radios" id="coverRadios"></div>
   <div class="btns"><button id="coverOk">✅ 확인</button><button id="coverOff">🗑️ 설정 해제</button></div>
+</dialog>
+
+<dialog id="coverViewDlg">
+  <h2>🖼️ 표지 미리보기</h2>
+  <div id="coverView"></div>
+  <div class="btns"><button id="coverViewClose">❌ 닫기</button></div>
 </dialog>
 
 <dialog id="exDlg">
@@ -1106,6 +1118,14 @@ $("tocBtn").onclick = openExDlg;
 $("fetchBtn").onclick = openCoverDlg;
 $("resetBtn").onclick = resetAll;
 $("convertBtn").onclick = runConvert;
+$("coverViewBtn").onclick = () => {
+  const box = $("coverView"); box.innerHTML = "";
+  if (S.imgUrl) { const img = el("img"); img.src = S.imgUrl; img.alt = "표지"; box.append(img); }
+  else box.textContent = "표지가 없습니다.\nIMG 칸을 눌러 이미지를 선택하거나 🔍 표지 찾기를 이용하세요.";
+  box.style.whiteSpace = "pre-line";
+  $("coverViewDlg").showModal();
+};
+$("coverViewClose").onclick = () => $("coverViewDlg").close();
 
 // --- 드래그 앤 드롭 / 붙여넣기 ---
 let dragDepth = 0;
