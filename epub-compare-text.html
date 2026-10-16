@@ -134,6 +134,13 @@
             white-space: nowrap;
         }
 
+        .file-size {
+            flex-shrink: 0;
+            font-size: 0.7rem;
+            color: var(--text-soft);
+            white-space: nowrap;
+        }
+
         .upload-btn {
             flex-shrink: 0;
             padding: 0.22rem 0.6rem;
@@ -1170,6 +1177,7 @@
                         <div class="file-panel-controls">
                             <button class="upload-btn" onclick="document.getElementById('file1').click()">파일 선택</button>
                             <span class="file-name" id="fileName1">선택된 파일 없음 (드래그 가능)</span>
+                            <span class="file-size" id="fileSize1"></span>
                         </div>
                     </div>
                     <div class="file-panel" id="filePanel2">
@@ -1177,6 +1185,7 @@
                         <div class="file-panel-controls">
                             <button class="upload-btn" onclick="document.getElementById('file2').click()">파일 선택</button>
                             <span class="file-name" id="fileName2">선택된 파일 없음 (드래그 가능)</span>
+                            <span class="file-size" id="fileSize2"></span>
                         </div>
                     </div>
                     <input type="file" id="file1" accept=".epub,.txt" onchange="handleFile(1, this)">
@@ -2346,6 +2355,16 @@ self.onmessage = async function (e) {
 
         const EMPTY_SAME_HTML = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">두 파일의 문단 내용이 동일합니다</div></div>`;
 
+        // 윈도우 탐색기와 같은 방식의 용량 표시: KB 단위 올림 + 천 단위 쉼표 (예: 1,682KB)
+        function formatWinSize(bytes) {
+            return `${Math.ceil(bytes / 1024).toLocaleString('en-US')}KB`;
+        }
+
+        function setFileSize(num, bytes) {
+            document.getElementById(`fileSize${num}`).textContent =
+                typeof bytes === 'number' ? `(${formatWinSize(bytes)})` : '';
+        }
+
         function handleFile(num, input) {
             const file = input.files[0];
             if (!file) return;
@@ -2355,6 +2374,7 @@ self.onmessage = async function (e) {
 
         function assignFile(num, file) {
             document.getElementById(`fileName${num}`).textContent = file.name;
+            setFileSize(num, file.size);
             if (num === 1) file1 = file;
             else file2 = file;
             document.getElementById('compareBtn').disabled = !(file1 && file2);
@@ -3214,6 +3234,7 @@ self.onmessage = async function (e) {
                 const name = document.getElementById(`fileName${num}`);
                 name.textContent = '선택된 파일 없음 (드래그 가능)';
                 name.removeAttribute('title');
+                setFileSize(num, null);
                 const input = document.getElementById(`file${num}`);
                 if (input) input.value = '';
             });
